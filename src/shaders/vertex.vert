@@ -2,6 +2,8 @@
 
 layout (location = 0) in vec3 position;
 
+uniform int u_time;
+
 out vec2 u_resolution;
 
 void main() {
