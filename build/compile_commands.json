@@ -1,0 +1,86 @@
+[
+{
+  "directory": "/home/pkner/code/Shaders/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/my_open_gl_project.dir/src/code/main.cpp.o -c /home/pkner/code/Shaders/src/code/main.cpp",
+  "file": "/home/pkner/code/Shaders/src/code/main.cpp",
+  "output": "CMakeFiles/my_open_gl_project.dir/src/code/main.cpp.o"
+},
+{
+  "directory": "/home/pkner/code/Shaders/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/my_open_gl_project.dir/src/code/libs/Shader.cpp.o -c /home/pkner/code/Shaders/src/code/libs/Shader.cpp",
+  "file": "/home/pkner/code/Shaders/src/code/libs/Shader.cpp",
+  "output": "CMakeFiles/my_open_gl_project.dir/src/code/libs/Shader.cpp.o"
+},
+{
+  "directory": "/home/pkner/code/Shaders/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/my_open_gl_project.dir/src/code/libs/Program.cpp.o -c /home/pkner/code/Shaders/src/code/libs/Program.cpp",
+  "file": "/home/pkner/code/Shaders/src/code/libs/Program.cpp",
+  "output": "CMakeFiles/my_open_gl_project.dir/src/code/libs/Program.cpp.o"
+},
+{
+  "directory": "/home/pkner/code/Shaders/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/my_open_gl_project.dir/src/code/libs/Window.cpp.o -c /home/pkner/code/Shaders/src/code/libs/Window.cpp",
+  "file": "/home/pkner/code/Shaders/src/code/libs/Window.cpp",
+  "output": "CMakeFiles/my_open_gl_project.dir/src/code/libs/Window.cpp.o"
+},
+{
+  "directory": "/home/pkner/code/Shaders/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/my_open_gl_project.dir/src/code/libs/WindowMesh.cpp.o -c /home/pkner/code/Shaders/src/code/libs/WindowMesh.cpp",
+  "file": "/home/pkner/code/Shaders/src/code/libs/WindowMesh.cpp",
+  "output": "CMakeFiles/my_open_gl_project.dir/src/code/libs/WindowMesh.cpp.o"
+},
+{
+  "directory": "/home/pkner/code/Shaders/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/my_open_gl_project.dir/src/code/libs/WPV.cpp.o -c /home/pkner/code/Shaders/src/code/libs/WPV.cpp",
+  "file": "/home/pkner/code/Shaders/src/code/libs/WPV.cpp",
+  "output": "CMakeFiles/my_open_gl_project.dir/src/code/libs/WPV.cpp.o"
+},
+{
+  "directory": "/home/pkner/code/Shaders/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui.cpp.o -c /home/pkner/code/Shaders/src/includes/imgui/imgui.cpp",
+  "file": "/home/pkner/code/Shaders/src/includes/imgui/imgui.cpp",
+  "output": "CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui.cpp.o"
+},
+{
+  "directory": "/home/pkner/code/Shaders/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_draw.cpp.o -c /home/pkner/code/Shaders/src/includes/imgui/imgui_draw.cpp",
+  "file": "/home/pkner/code/Shaders/src/includes/imgui/imgui_draw.cpp",
+  "output": "CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_draw.cpp.o"
+},
+{
+  "directory": "/home/pkner/code/Shaders/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_demo.cpp.o -c /home/pkner/code/Shaders/src/includes/imgui/imgui_demo.cpp",
+  "file": "/home/pkner/code/Shaders/src/includes/imgui/imgui_demo.cpp",
+  "output": "CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_demo.cpp.o"
+},
+{
+  "directory": "/home/pkner/code/Shaders/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_widgets.cpp.o -c /home/pkner/code/Shaders/src/includes/imgui/imgui_widgets.cpp",
+  "file": "/home/pkner/code/Shaders/src/includes/imgui/imgui_widgets.cpp",
+  "output": "CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_widgets.cpp.o"
+},
+{
+  "directory": "/home/pkner/code/Shaders/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_tables.cpp.o -c /home/pkner/code/Shaders/src/includes/imgui/imgui_tables.cpp",
+  "file": "/home/pkner/code/Shaders/src/includes/imgui/imgui_tables.cpp",
+  "output": "CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_tables.cpp.o"
+},
+{
+  "directory": "/home/pkner/code/Shaders/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_impl_glfw.cpp.o -c /home/pkner/code/Shaders/src/includes/imgui/imgui_impl_glfw.cpp",
+  "file": "/home/pkner/code/Shaders/src/includes/imgui/imgui_impl_glfw.cpp",
+  "output": "CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_impl_glfw.cpp.o"
+},
+{
+  "directory": "/home/pkner/code/Shaders/build",
+  "command": "/usr/bin/c++   -g -o CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_impl_opengl3.cpp.o -c /home/pkner/code/Shaders/src/includes/imgui/imgui_impl_opengl3.cpp",
+  "file": "/home/pkner/code/Shaders/src/includes/imgui/imgui_impl_opengl3.cpp",
+  "output": "CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_impl_opengl3.cpp.o"
+},
+{
+  "directory": "/home/pkner/code/Shaders/build",
+  "command": "/usr/bin/cc   -g -o CMakeFiles/my_open_gl_project.dir/src/includes/glad/glad.c.o -c /home/pkner/code/Shaders/src/includes/glad/glad.c",
+  "file": "/home/pkner/code/Shaders/src/includes/glad/glad.c",
+  "output": "CMakeFiles/my_open_gl_project.dir/src/includes/glad/glad.c.o"
+}
+]

@@ -1,0 +1,3 @@
+/home/pkner/code/Shaders/build/CMakeFiles/my_open_gl_project.dir
+/home/pkner/code/Shaders/build/CMakeFiles/edit_cache.dir
+/home/pkner/code/Shaders/build/CMakeFiles/rebuild_cache.dir
