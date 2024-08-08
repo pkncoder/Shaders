@@ -136,7 +136,7 @@ HitInfo calculateClosestHit(Ray ray) {
     );
     spheres[2] = Sphere(
         vec3(0.0, -0.2, -15.0),
-        0.5,
+        1.0,
         RayTracingMaterial(
             vec3(0.9333, 0.0, 1.0),
             0.0,
@@ -160,7 +160,7 @@ HitInfo calculateClosestHit(Ray ray) {
 }
 
 vec3 trace(Ray ray, vec2 uv, int depth) {
-    int numBounces = 1;
+    int numBounces = 30;
 
     vec3 colorMult = vec3(1.0);
     vec3 color = vec3(0.0);
@@ -222,6 +222,8 @@ void main() {
     for (int r = 0; r < u_raysPerPixel; r++) {
         color += trace(ray, uv, r);
     }
+
+    color = pow(color, vec3(1.0 / 2.2));
 
     gl_FragColor = vec4(color / u_raysPerPixel, 1.0);
 }

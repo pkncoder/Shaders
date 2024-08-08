@@ -6,8 +6,8 @@
 #include "./libs/WindowMesh.h"
 #include "./libs/WPV.h"
 
-#define WIDTH 3000
-#define HEIGHT 2000
+#define WIDTH 1000
+#define HEIGHT 650
 
 using namespace std;
 
@@ -102,7 +102,6 @@ int main() {
 
         u_time++;
     }
-
 
     // -------------------- Post-Run loop --------------------
 
