@@ -17,12 +17,11 @@ uniform float u_mousePosY;
 vec2 u_mouse = vec2(u_mousePosX, u_mousePosY);
 
 #define PI 3.14159265359
-#define softShadowRayNum 30.0
 
 struct RayTracingMaterial {
     vec3 color;
     float emmisive;
-    float roughness;
+    float smoothness;
 };
 
 struct Sphere {
@@ -36,12 +35,18 @@ struct HitInfo {
     vec3 hitPos;
     float dist;
     vec3 normal;
-    Sphere sphereHit;
+    RayTracingMaterial material;
 };
 
 struct Ray {
     vec3 orgin;
     vec3 direction;
+};
+
+struct Box {
+    vec3 orgin;
+    vec3 boxSize;
+    RayTracingMaterial material;
 };
 
 HitInfo intersect(Ray ray, Sphere sphere) {
@@ -69,7 +74,38 @@ HitInfo intersect(Ray ray, Sphere sphere) {
     hit.hitPos = ray.orgin + ray.direction * t0;
     hit.dist = t0;
     hit.normal = normalize(hit.hitPos - sphere.coords);
-    hit.sphereHit = sphere;
+    hit.material = sphere.material;
+
+    return hit;
+}
+
+//https://iquilezles.org/articles/intersectors/
+// axis aligned box centered at the origin, with size box.boxSize
+HitInfo intersect( Ray ray, Box box ) 
+{
+
+    HitInfo hit;
+    hit.hit = false;
+
+    vec3 m = 1./ray.direction;
+    vec3 n = m*(ray.orgin - box.orgin);
+    vec3 k = abs(m) * box.boxSize;
+	
+    vec3 t1 = -n - k;
+    vec3 t2 = -n + k;
+
+	float tN = max( max( t1.x, t1.y ), t1.z );
+	float tF = min( min( t2.x, t2.y ), t2.z );
+	
+	if( tN > tF || tF < 0.) return hit;
+    
+    float t = tN < 0.0001 ? tF : tN;
+
+    hit.hit = true;
+    hit.hitPos = ray.orgin + ray.direction * t;
+    hit.dist = t;
+    hit.normal = -sign(ray.direction)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);;
+    hit.material = box.material;
 
     return hit;
 }
@@ -112,41 +148,93 @@ vec3 RandomDirection(inout int state)
     return normalize(vec3(x, y, z));
 }
 
-HitInfo calculateClosestHit(Ray ray) {
+HitInfo calculateClosestHit(Ray ray, int depth) {
 
-    Sphere[3] spheres;
+    Sphere[1] spheres;
+    Box[7] boxes;
 
     spheres[0] = Sphere(
-        vec3(-100.0, 0.0, 108.0),
-        100.0,
+        vec3(0.0, 0.0, -5.0),
+        2.0,
         RayTracingMaterial(
             vec3(1.0, 1.0, 1.0),
-            100.0,
-            1.0
+            0.0,
+            0.0
         )
     );
-    spheres[1] = Sphere(
-        vec3(2.0, -20.0, -10.0),
-        20.0,
+
+    boxes[0] = Box(
+        vec3(-4.0, 0.0, -3.0),
+        vec3(0.1, 4.0, 4.0),
         RayTracingMaterial(
-            vec3(0.29, 0.28, 0.28),
+            vec3(1.0, 0.0, 0.0),
             0.0,
-            1.0
+            0.0
         )
     );
-    spheres[2] = Sphere(
-        vec3(0.0, -0.2, -15.0),
-        1.0,
+
+    boxes[1] = Box(
+        vec3(0.0, 0.0, -1.0),
+        vec3(4.0, 4.0, 0.1),
         RayTracingMaterial(
-            vec3(0.9333, 0.0, 1.0),
+            vec3(0.2, 0.2, 0.2),
             0.0,
-            1.0
+            0.0
+        )
+    );
+
+    boxes[2] = Box(
+        vec3(4.0, 0.0, -3.0),
+        vec3(0.1, 4.0, 4.0),
+        RayTracingMaterial(
+            vec3(0.0, 0.0, 1.0),
+            0.0,
+            0.0
+        )
+    );
+
+    boxes[3] = Box(
+        vec3(0.0, -4.0, -3.0),
+        vec3(4.0, 0.1, 4.0),
+        RayTracingMaterial(
+            vec3(0.0, 1.0, 0.0),
+            0.0,
+            0.0
+        )
+    );
+
+    boxes[4] = Box(
+        vec3(0.0, 4.0, -3.0),
+        vec3(4.0, 0.1, 4.0),
+        RayTracingMaterial(
+            vec3(1.0, 1.0, 1.0),
+            0.0,
+            0.0
+        )
+    );
+    boxes[5] = Box(
+        vec3(0.0, 3.8, -3.0),
+        vec3(1.0, 0.2, 1.0),
+        RayTracingMaterial(
+            vec3(1.0, 1.0, 1.0),
+            1.0,
+            0.0
+        )
+    );
+
+    boxes[6] = Box(
+        vec3(0.0, 0.0, -7.0),
+        vec3(4.0, 4.0, 0.1),
+        RayTracingMaterial(
+            vec3(1.0),
+            0.0,
+            0.0
         )
     );
 
     HitInfo closestHit;
     closestHit.hit = false;
-    closestHit.dist = 1.0 / 0.0; // Infinity
+    closestHit.dist = 800000.0; // Infinity
 
     for (int i = 0; i < spheres.length(); i++) {
         HitInfo sphereHit = intersect(ray, spheres[i]);
@@ -156,26 +244,35 @@ HitInfo calculateClosestHit(Ray ray) {
         }
     }
 
+    int ignore = 0;
+    if (depth < 1) { ignore = 1; }
+
+    for (int i = 0; i < boxes.length() - ignore; i++) {
+        HitInfo boxHit = intersect(ray, boxes[i]);
+
+        if (boxHit.hit && boxHit.dist < closestHit.dist) {
+            closestHit = boxHit;
+        }
+    }
+
     return closestHit;
 }
 
-vec3 trace(Ray ray, vec2 uv, int depth) {
-    int numBounces = 30;
+vec3 trace(Ray ray, int rngState, int depth) {
+    int numBounces = 10;
 
     vec3 colorMult = vec3(1.0);
     vec3 color = vec3(0.0);
 
     for (int b = 0; b <= numBounces; b++) { 
-        HitInfo closestHit = calculateClosestHit(ray);
+        HitInfo closestHit = calculateClosestHit(ray, b);
 
         if (!closestHit.hit) {
             break;
         }
 
         // check
-        int pixelIndex = int(gl_FragCoord.y * u_resolution.x + gl_FragCoord.x);
-	    int rngState = pixelIndex + (u_time) * 719393 + b;
-        vec3 offset = (RandomDirection(rngState));
+        vec3 offset = (closestHit.normal + RandomDirection(rngState));
 
         if (dot(closestHit.normal, offset) < 0.0) {
             offset = -offset;
@@ -183,11 +280,16 @@ vec3 trace(Ray ray, vec2 uv, int depth) {
 
         // check
         ray.orgin = closestHit.hitPos;
-        ray.direction = normalize(offset);
 
-        vec3 emittedLight = closestHit.sphereHit.material.emmisive * closestHit.sphereHit.material.color;
+        vec3 diffuseDirection = normalize(offset);
+        vec3 specularDirection = reflect(ray.direction, closestHit.normal);
+
+        ray.direction = normalize(mix(diffuseDirection, specularDirection, closestHit.material.smoothness));
+
+        vec3 emittedLight = closestHit.material.emmisive * closestHit.material.color;
+        //float lightStrength = dot(closestHit.normal, ray.direction);
         color += emittedLight * colorMult;
-        colorMult *= closestHit.sphereHit.material.color;
+        colorMult *= closestHit.material.color;
     }
 
     return color;
@@ -217,13 +319,16 @@ void main() {
         ray.direction.yz *= rot2D(m.y * mouseModifier);
     }
 
+    int pixelIndex = int(gl_FragCoord.y * u_resolution.x + gl_FragCoord.x);
+	int rngState = pixelIndex + (u_time * 1) * 719393;
+
     vec3 color = vec3(0.0);
     
     for (int r = 0; r < u_raysPerPixel; r++) {
-        color += trace(ray, uv, r);
+        color += trace(ray, rngState, r);
     }
 
-    color = pow(color, vec3(1.0 / 2.2));
+    color = pow(color / u_raysPerPixel, vec3(1.0 / 2.2));
 
-    gl_FragColor = vec4(color / u_raysPerPixel, 1.0);
+    gl_FragColor = vec4(color, 1.0);
 }
