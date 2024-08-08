@@ -62,17 +62,6 @@ HitInfo intersect(Ray ray, Sphere sphere) {
     float t0 = (-b - sqrt(det)) / (a);
 
     if (t0 < 0.0) {
-
-        float t1 = (-b + sqrt(det)) / (a);
-
-        if (t1 > 0.0) {
-            hit.hit = true;
-            hit.hitPos = ray.orgin + ray.direction * t1;
-            hit.dist = t1;
-            hit.normal = normalize(hit.hitPos - sphere.coords);
-            hit.sphereHit = sphere;
-        }
-
         return hit;
     }
 
@@ -137,8 +126,8 @@ HitInfo calculateClosestHit(Ray ray) {
         )
     );
     spheres[1] = Sphere(
-        vec3(5.0, -10.0, -10.0),
-        10.0,
+        vec3(2.0, -20.0, -10.0),
+        20.0,
         RayTracingMaterial(
             vec3(0.29, 0.28, 0.28),
             0.0,
@@ -146,10 +135,10 @@ HitInfo calculateClosestHit(Ray ray) {
         )
     );
     spheres[2] = Sphere(
-        vec3(-5.0, 5.0, 8.0),
-        1.5,
+        vec3(0.0, -0.2, -15.0),
+        0.5,
         RayTracingMaterial(
-            vec3(0.38, 0.0, 1.0),
+            vec3(0.9333, 0.0, 1.0),
             0.0,
             1.0
         )
@@ -171,12 +160,12 @@ HitInfo calculateClosestHit(Ray ray) {
 }
 
 vec3 trace(Ray ray, vec2 uv, int depth) {
-    int numBounces = 2;
+    int numBounces = 1;
 
     vec3 colorMult = vec3(1.0);
     vec3 color = vec3(0.0);
 
-    for (int b = 0; b < numBounces; b++) { 
+    for (int b = 0; b <= numBounces; b++) { 
         HitInfo closestHit = calculateClosestHit(ray);
 
         if (!closestHit.hit) {
@@ -185,12 +174,16 @@ vec3 trace(Ray ray, vec2 uv, int depth) {
 
         // check
         int pixelIndex = int(gl_FragCoord.y * u_resolution.x + gl_FragCoord.x);
-	    int rngState = pixelIndex + (u_time) * 719393;
+	    int rngState = pixelIndex + (u_time) * 719393 + b;
         vec3 offset = (RandomDirection(rngState));
 
+        if (dot(closestHit.normal, offset) < 0.0) {
+            offset = -offset;
+        }
+
         // check
-        ray.orgin = closestHit.hitPos + closestHit.normal * 0.1;
-        ray.direction = normalize(closestHit.normal + offset);
+        ray.orgin = closestHit.hitPos;
+        ray.direction = normalize(offset);
 
         vec3 emittedLight = closestHit.sphereHit.material.emmisive * closestHit.sphereHit.material.color;
         color += emittedLight * colorMult;
