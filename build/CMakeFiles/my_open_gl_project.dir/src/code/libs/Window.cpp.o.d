@@ -32,7 +32,7 @@ CMakeFiles/my_open_gl_project.dir/src/code/libs/Window.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
  /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
- /usr/local/include/GLFW/glfw3.h \
+ /usr/include/GLFW/glfw3.h \
  /home/pkner/code/Shaders/src/code/libs/../../includes/packs/standardImports.h \
  /usr/include/c++/13/iostream /usr/include/c++/13/bits/requires_hosted.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
