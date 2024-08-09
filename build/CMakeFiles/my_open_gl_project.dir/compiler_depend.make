@@ -1172,7 +1172,6 @@ CMakeFiles/my_open_gl_project.dir/src/code/main.cpp.o: /home/pkner/code/Shaders/
   /home/pkner/code/Shaders/src/code/libs/WPV.h \
   /home/pkner/code/Shaders/src/code/libs/Window.h \
   /home/pkner/code/Shaders/src/code/libs/WindowMesh.h \
-  /usr/include/GLFW/glfw3.h \
   /usr/include/KHR/khrplatform.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
@@ -1405,7 +1404,8 @@ CMakeFiles/my_open_gl_project.dir/src/code/main.cpp.o: /home/pkner/code/Shaders/
   /usr/lib/gcc/x86_64-linux-gnu/13/include/float.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h \
-  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h
+  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h \
+  /usr/local/include/GLFW/glfw3.h
 
 CMakeFiles/my_open_gl_project.dir/src/includes/glad/glad.c.o: /home/pkner/code/Shaders/src/includes/glad/glad.c \
   /home/pkner/code/Shaders/src/includes/glad/glad.h \
@@ -2824,6 +2824,10 @@ CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_widgets.cpp.o: /home/
 
 /usr/include/x86_64-linux-gnu/bits/dlfcn.h:
 
+/usr/lib/gcc/x86_64-linux-gnu/13/include/popcntintrin.h:
+
+/usr/include/dlfcn.h:
+
 /usr/include/c++/13/pstl/pstl_config.h:
 
 /usr/include/c++/13/ostream:
@@ -3436,10 +3440,8 @@ CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_widgets.cpp.o: /home/
 
 /home/pkner/code/Shaders/src/code/libs/WindowMesh.cpp:
 
+/usr/local/include/GLFW/glfw3.h:
+
 /usr/include/x86_64-linux-gnu/bits/fp-logb.h:
 
 /home/pkner/code/Shaders/src/includes/glad/glad.c:
-
-/usr/lib/gcc/x86_64-linux-gnu/13/include/popcntintrin.h:
-
-/usr/include/dlfcn.h:
