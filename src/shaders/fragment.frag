@@ -21,8 +21,10 @@ vec2 u_mouse = vec2(u_mousePosX, u_mousePosY);
 
 struct RayTracingMaterial {
     vec3 color;
+    vec3 specularColor;
     float emmisive;
     float smoothness;
+    float specularProbability;
 };
 
 struct Sphere {
@@ -155,12 +157,14 @@ HitInfo calculateClosestHit(Ray ray, int depth) {
     Box[7] boxes;
 
     spheres[0] = Sphere(
-        vec3(0.0, 0.0, -4.0),
-        2.0,
+        vec3(0.0, -1.0, -2.0),
+        3.0,
         RayTracingMaterial(
-            vec3(1.0, 1.0, 1.0),
+            vec3(0.88, 0.3, 0.3),
+            vec3(1.0),
             0.0,
-            0.0
+            0.5,
+            0.05
         )
     );
 
@@ -169,6 +173,8 @@ HitInfo calculateClosestHit(Ray ray, int depth) {
         vec3(0.1, 4.0, 4.0),
         RayTracingMaterial(
             vec3(1.0, 0.0, 0.0),
+            vec3(1.0),
+            0.0,
             0.0,
             0.0
         )
@@ -179,6 +185,8 @@ HitInfo calculateClosestHit(Ray ray, int depth) {
         vec3(4.0, 4.0, 0.1),
         RayTracingMaterial(
             vec3(0.2, 0.2, 0.2),
+            vec3(1.0),
+            0.0,
             0.0,
             0.0
         )
@@ -189,6 +197,8 @@ HitInfo calculateClosestHit(Ray ray, int depth) {
         vec3(0.1, 4.0, 4.0),
         RayTracingMaterial(
             vec3(0.0, 0.0, 1.0),
+            vec3(1.0),
+            0.0,
             0.0,
             0.0
         )
@@ -199,6 +209,8 @@ HitInfo calculateClosestHit(Ray ray, int depth) {
         vec3(4.0, 0.1, 4.0),
         RayTracingMaterial(
             vec3(0.0, 1.0, 0.0),
+            vec3(1.0),
+            0.0,
             0.0,
             0.0
         )
@@ -209,6 +221,8 @@ HitInfo calculateClosestHit(Ray ray, int depth) {
         vec3(4.0, 0.1, 4.0),
         RayTracingMaterial(
             vec3(1.0, 1.0, 1.0),
+            vec3(1.0),
+            0.0,
             0.0,
             0.0
         )
@@ -218,7 +232,9 @@ HitInfo calculateClosestHit(Ray ray, int depth) {
         vec3(1.0, 0.2, 1.0),
         RayTracingMaterial(
             vec3(1.0, 1.0, 1.0),
+            vec3(1.0),
             10.0,
+            0.0,
             0.0
         )
     );
@@ -228,6 +244,8 @@ HitInfo calculateClosestHit(Ray ray, int depth) {
         vec3(4.0, 4.0, 0.2),
         RayTracingMaterial(
             vec3(1.0, 0.9843, 0.0),
+            vec3(1.0),
+            0.0,
             0.0,
             0.0
         )
@@ -269,6 +287,8 @@ vec3 trace(Ray ray, int rngState) {
 
         HitInfo closestHit = calculateClosestHit(ray, b);
 
+        rngState += b;
+
         if (!closestHit.hit) {
             break;
         }
@@ -280,17 +300,30 @@ vec3 trace(Ray ray, int rngState) {
             offset = -offset;
         }
 
+        // Figure out new ray position and direction
+		int isSpecularBounce = 0;
+        
+        if (closestHit.material.specularProbability >= RandomValue(rngState)) {
+            isSpecularBounce = 1;
+        }
+
         // check
-        ray.orgin = closestHit.hitPos;
+        ray.orgin = closestHit.hitPos + closestHit.normal * 0.1;
 
         vec3 diffuseDirection = normalize(offset);
         vec3 specularDirection = reflect(ray.direction, closestHit.normal);
 
-        ray.direction = normalize(mix(diffuseDirection, specularDirection, closestHit.material.smoothness));
+        ray.direction = normalize(mix(diffuseDirection, specularDirection, closestHit.material.smoothness * isSpecularBounce));
 
         vec3 emittedLight = closestHit.material.emmisive * closestHit.material.color;
         color += emittedLight * colorMult;
-        colorMult *= closestHit.material.color;
+        colorMult *= mix(closestHit.material.color, closestHit.material.specularColor, vec3(isSpecularBounce));
+
+        float rolette = max(colorMult.r, max(colorMult.g, colorMult.b));
+
+        if (rolette < 0.1) {
+            break;
+        }
     }
 
     return color;
@@ -321,7 +354,7 @@ void main() {
     }
 
     int pixelIndex = int(gl_FragCoord.y * u_resolution.x + gl_FragCoord.x);
-	int rngState = int((pixelIndex + (u_time) * 719393));
+	int rngState = int((pixelIndex + u_time * -719393));
 
     vec3 color = vec3(0.0);
     
