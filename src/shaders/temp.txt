@@ -1,20 +1,4 @@
-#version 330 core
 precision highp float;
-
-in vec2 u_resolution;
-
-uniform bool u_mouseMove;
-
-uniform int u_raysPerPixel;
-
-uniform int u_time;
-
-uniform float u_fov;
-
-uniform float u_mousePosX;
-uniform float u_mousePosY;
-
-vec2 u_mouse = vec2(u_mousePosX, u_mousePosY);
 
 #define PI 3.14159265359
 
@@ -296,7 +280,7 @@ vec3 trace(Ray ray, int rngState) {
     return color;
 }
 
-void main() {
+void main( out vec4 fragColor, in vec2 fragCoord ) {
     vec2 uv = ((gl_FragCoord.xy / u_resolution) * 2.0 - 1.0) * vec2(u_resolution.x / u_resolution.y, 1.0);
     
     float angle = tan((PI * 0.5 * u_fov) / 180.0);
@@ -312,24 +296,24 @@ void main() {
 
     float mouseModifier = 3.0;
 
-    if (u_mouseMove) {
-        ray.orgin.xz *= rot2D(-m.x * mouseModifier);
-        ray.direction.xz *= rot2D(-m.x * mouseModifier);
+    if (false) {
+        //ray.orgin.xz *= rot2D(-m.x * mouseModifier);
+        //ray.direction.xz *= rot2D(-m.x * mouseModifier);
 
-        ray.orgin.yz *= rot2D(m.y * mouseModifier);
-        ray.direction.yz *= rot2D(m.y * mouseModifier);
+        //ray.orgin.yz *= rot2D(m.y * mouseModifier);
+        //ray.direction.yz *= rot2D(m.y * mouseModifier);
     }
 
-    int pixelIndex = int(gl_FragCoord.y * u_resolution.x + gl_FragCoord.x);
-	int rngState = pixelIndex + (u_time * 1) * 719393;
+    int pixelIndex = int(fragCoord.y * iResolution.x + fragCoord.x);
+	int rngState = pixelIndex + (time * 1) * 719393;
 
     vec3 color = vec3(0.0);
     
-    for (int r = 0; r < u_raysPerPixel; r++) {
+    for (int r = 0; r < 1; r++) {
         color += trace(ray, rngState);
     }
 
     //color = pow(color / u_raysPerPixel, vec3(1.0 / 2.2));
 
-    gl_FragColor = vec4(color, 1.0);
+    fragColor = vec4(color, 1.0);
 }
