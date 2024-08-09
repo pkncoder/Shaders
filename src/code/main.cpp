@@ -6,8 +6,8 @@
 #include "./libs/WindowMesh.h"
 #include "./libs/WPV.h"
 
-#define WIDTH 1000
-#define HEIGHT 650
+#define WIDTH 3000
+#define HEIGHT 2000
 
 using namespace std;
 
@@ -55,7 +55,12 @@ int main() {
 
     float fov = 30.0;
     int u_time = 0;
+    int timeSave = 0;
+
     int raysPerPixel = 1;
+    int maxBounces = 1;
+
+    bool render = true;
 
     while(window.windowOpen()) {
 
@@ -76,6 +81,9 @@ int main() {
 
         ImGui::SliderInt("Rays Per Pixel", &raysPerPixel, 1.0, 100.0);
         wpv.getProgram().setInt("u_raysPerPixel", raysPerPixel);
+
+        ImGui::SliderInt("Max Bounces", &maxBounces, 1.0, 100.0);
+        wpv.getProgram().setInt("u_maxBounces", maxBounces);
 
         bool mouseMove;
         ImGui::Checkbox("Mouse", &mouseMove);

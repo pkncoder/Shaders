@@ -6,6 +6,7 @@ in vec2 u_resolution;
 uniform bool u_mouseMove;
 
 uniform int u_raysPerPixel;
+uniform int u_maxBounces;
 
 uniform int u_time;
 
@@ -259,7 +260,7 @@ HitInfo calculateClosestHit(Ray ray, int depth) {
 }
 
 vec3 trace(Ray ray, int rngState) {
-    int numBounces = 30;
+    int numBounces = u_maxBounces;
 
     vec3 colorMult = vec3(1.0);
     vec3 color = vec3(0.0);
@@ -288,7 +289,6 @@ vec3 trace(Ray ray, int rngState) {
         ray.direction = normalize(mix(diffuseDirection, specularDirection, closestHit.material.smoothness));
 
         vec3 emittedLight = closestHit.material.emmisive * closestHit.material.color;
-        //float lightStrength = dot(closestHit.normal, ray.direction);
         color += emittedLight * colorMult;
         colorMult *= closestHit.material.color;
     }
@@ -321,15 +321,14 @@ void main() {
     }
 
     int pixelIndex = int(gl_FragCoord.y * u_resolution.x + gl_FragCoord.x);
-	int rngState = pixelIndex + (u_time * 1) * 719393;
+	int rngState = int((pixelIndex + (u_time) * 719393));
 
     vec3 color = vec3(0.0);
     
     for (int r = 0; r < u_raysPerPixel; r++) {
-        color += trace(ray, rngState);
+        color += trace(ray, rngState + int(pow(float(r), 3.0)));
     }
-
-    //color = pow(color / u_raysPerPixel, vec3(1.0 / 2.2));
+    color = pow(color / u_raysPerPixel, vec3(1.0 / 2.2));
 
     gl_FragColor = vec4(color, 1.0);
 }
