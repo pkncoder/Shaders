@@ -60,6 +60,8 @@ int main() {
     int raysPerPixel = 1;
     int maxBounces = 1;
 
+    float exposure = 0.5;
+
     bool render = true;
 
     while(window.windowOpen()) {
@@ -89,6 +91,9 @@ int main() {
         ImGui::Checkbox("Mouse", &mouseMove);
 
         wpv.getProgram().setBool("u_mouseMove", mouseMove);
+
+        ImGui::SliderFloat("Exposure", &exposure, 0.1, 2.0);
+        wpv.getProgram().setFloat("u_exposure", exposure);
 
 
         ImGui::SliderFloat("FOV", &fov, 1.0, 179.0);
