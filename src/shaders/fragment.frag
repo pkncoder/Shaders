@@ -349,8 +349,8 @@ HitInfo calculateClosestHit(Ray ray, int depth) {
         )
     );
     boxes[5] = Box(
-        vec3(0.0, 4.0, -3.0),
-        vec3(2.0, 0.2, 2.0),
+        vec3(0.0, 3.9, -3.0),
+        vec3(2.0, 0.1, 2.0),
         RayTracingMaterial(
             vec3(1.0, 1.0, 1.0),
             vec3(1.0),
