@@ -1,41 +1,43 @@
 #version 330 core
-precision highp float;
+precision mediump float;
 
 in vec2 u_resolution;
-
-uniform bool u_mouseMove;
-
-uniform int u_raysPerPixel;
-uniform int u_maxBounces;
-
-uniform float u_exposure;
-
-uniform int u_time;
-
-uniform float u_fov;
 
 uniform float u_mousePosX;
 uniform float u_mousePosY;
 
+uniform bool u_mouseMove;
+
 vec2 u_mouse = vec2(u_mousePosX, u_mousePosY);
 
 #define PI 3.14159265359
-#define TWO_PI 6.28318530718
 
+
+/* -------------------------- STRUCTS -------------------------- */
+// Ray tracing objects
+// Object materials
 struct RayTracingMaterial {
-    vec3 color;
-    vec3 specularColor;
-    vec3 emmisive;
+    vec3 albedo;
+    float metallic;
     float roughness;
-    float specularProbability;
 };
 
+// Ball
 struct Sphere {
-    vec3 coords;
+    vec3 position;
     float radius;
     RayTracingMaterial material;
 };
 
+// Point-light
+struct PointLight {
+    vec3 position;
+    vec3 albedo;
+};
+
+
+// Functional structs
+// Returned from hit functions to give info on an intersection
 struct HitInfo {
     bool hit;
     vec3 hitPos;
@@ -44,23 +46,21 @@ struct HitInfo {
     RayTracingMaterial material;
 };
 
+// Used in hit and lighting functions to calculate info on the final color
 struct Ray {
     vec3 orgin;
     vec3 direction;
 };
 
-struct Box {
-    vec3 orgin;
-    vec3 boxSize;
-    RayTracingMaterial material;
-};
+
+/* --------------------- RAY-OBJECT EQUATIONS ------------------ */
 
 HitInfo intersect(Ray ray, Sphere sphere) {
     HitInfo hit;
 
     hit.hit = false;
 
-    vec3 rayOffset = ray.orgin - sphere.coords;
+    vec3 rayOffset = ray.orgin - sphere.position;
 
     float a = dot(ray.direction, ray.direction);
     float b = dot(rayOffset, ray.direction);
@@ -83,7 +83,7 @@ HitInfo intersect(Ray ray, Sphere sphere) {
         hit.hit = true;
         hit.hitPos = ray.orgin + ray.direction * t1;
         hit.dist = t1;
-        hit.normal = normalize(hit.hitPos - sphere.coords);
+        hit.normal = normalize(hit.hitPos - sphere.position);
         hit.material = sphere.material;
 
         return hit;
@@ -92,42 +92,121 @@ HitInfo intersect(Ray ray, Sphere sphere) {
     hit.hit = true;
     hit.hitPos = ray.orgin + ray.direction * t0;
     hit.dist = t0;
-    hit.normal = normalize(hit.hitPos - sphere.coords);
+    hit.normal = normalize(hit.hitPos - sphere.position);
     hit.material = sphere.material;
 
     return hit;
 }
 
-//https://iquilezles.org/articles/intersectors/
-// axis aligned box centered at the origin, with size box.boxSize
-HitInfo intersect( Ray ray, Box box ) 
-{
+// Calculate the closest object in the scene
+HitInfo calculateClosestHit(Ray ray) {
 
-    HitInfo hit;
-    hit.hit = false;
+    // Start with a base hit info
+    HitInfo closestHit;
+    closestHit.hit = false; // Set hit to false
+    closestHit.dist = 800000000000000000000.0; // Set dist to a really big number
 
-    vec3 m = 1./ray.direction;
-    vec3 n = m*(ray.orgin - box.orgin);
-    vec3 k = abs(m) * box.boxSize;
-	
-    vec3 t1 = -n - k;
-    vec3 t2 = -n + k;
+    Sphere spheres[3]; // Array of all the spheres
+    spheres[0] = Sphere(
+        vec3(-3.0, 0.0, 0.0),
+        1.0,
+        RayTracingMaterial(
+            vec3(0.4, 1.0, 0.0),
+            1.0,
+            0.6
+        )
+    );
 
-	float tN = max( max( t1.x, t1.y ), t1.z );
-	float tF = min( min( t2.x, t2.y ), t2.z );
-	
-	if( tN > tF || tF < 0.) return hit;
+    spheres[1] = Sphere(
+        vec3(0.0, 0.0, 8.0),
+        3.0,
+        RayTracingMaterial(
+            vec3(0.0, 0.5333, 1.0),
+            0.8,
+            0.2
+        )
+    );
+
+    spheres[2] = Sphere(
+        vec3(3.0, -2.0, 3.0),
+        2.0,
+        RayTracingMaterial(
+            vec3(1.0, 0.1686, 0.1686),
+            0.0,
+            0.4
+        )
+    );
     
-    float t = tN < 0.1 ? tF : tN;
+    // Loop every sphere
+    for (int i = 0; i < spheres.length(); i++) {
 
-    hit.hit = true;
-    hit.hitPos = ray.orgin + ray.direction * t;
-    hit.dist = t;
-    hit.normal = -sign(ray.direction)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);;
-    hit.material = box.material;
+        // Calculate the hit info of the current sphere
+        HitInfo hit = intersect(ray, spheres[i]);
 
-    return hit;
+        // If the hit hit, and it is closer than the current closest
+        if (hit.hit && hit.dist < closestHit.dist) {
+
+            // Set closest hit to this hit
+            closestHit = hit;
+        }
+    }
+
+    // At the end, return hit
+    return closestHit;
 }
+
+/* ---------------------- FINAL HELPER EQUATIONS --------------- */
+
+
+/*---------------------------- COOK-TORRANCE BDRF -----------------------------*/
+
+// D
+// Normal distrobution
+float DistributionGGX(vec3 N, vec3 H, float roughness)
+{
+    float a      = roughness*roughness;
+    float a2     = a*a;
+    float NdotH  = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH*NdotH;
+	
+    float num   = a2;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = PI * denom * denom;
+	
+    return num / denom;
+}
+
+// F
+// Frensel
+vec3 fresnelSchlick(float cosTheta, vec3 F0)
+{
+    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}  
+
+// G
+// Geometry
+float GeometrySchlickGGX(float NdotV, float roughness)
+{
+    float r = (roughness + 1.0);
+    float k = (r*r) / 8.0;
+
+    float num   = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
+	
+    return num / denom;
+}
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+{
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx2  = GeometrySchlickGGX(NdotV, roughness);
+    float ggx1  = GeometrySchlickGGX(NdotL, roughness);
+	
+    return ggx1 * ggx2;
+}
+
+
+/* --------------------- Main Function --------------- */
 
 mat2 rot2D(float angle) {
     float s = sin(angle);
@@ -135,340 +214,25 @@ mat2 rot2D(float angle) {
     return mat2(c, -s, s, c);
 }
 
-// ACES tone mapping curve fit to go from HDR to LDR
-//https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-vec3 ACESFilm(vec3 x)
-{
-    float a = 2.51f;
-    float b = 0.03f;
-    float c = 2.43f;
-    float d = 0.59f;
-    float e = 0.14f;
-    return clamp((x*(a*x + b)) / (x*(c*x + d) + e), 0.0f, 1.0f);
-}
-
-uint wang_hash(inout uint seed)
-{
-    seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
-    seed *= uint(9);
-    seed = seed ^ (seed >> 4);
-    seed *= uint(0x27d4eb2d);
-    seed = seed ^ (seed >> 15);
-    return seed;
-}
- 
-float RandomFloat01(inout uint state)
-{
-    return float(wang_hash(state)) / 4294967296.0;
-}
- 
-vec3 RandomUnitVector(inout uint state)
-{
-    float z = RandomFloat01(state) * 2.0f - 1.0f;
-    float a = RandomFloat01(state) * TWO_PI;
-    float r = sqrt(1.0f - z * z);
-    float x = r * cos(a);
-    float y = r * sin(a);
-    return vec3(x, y, z);
-}
-
-vec3 LessThan(vec3 f, float value)
-{
-    return vec3(
-        (f.x < value) ? 1.0f : 0.0f,
-        (f.y < value) ? 1.0f : 0.0f,
-        (f.z < value) ? 1.0f : 0.0f);
-}
- 
-vec3 LinearToSRGB(vec3 rgb)
-{
-    rgb = clamp(rgb, 0.0f, 1.0f);
- 
-    return mix(
-        pow(rgb, vec3(1.0f / 2.4f)) * 1.055f - 0.055f,
-        rgb * 12.92f,
-        LessThan(rgb, 0.0031308f)
-    );
-}
-
-HitInfo calculateClosestHit(Ray ray, int depth) {
-
-    Sphere[8] spheres;
-    Box[7] boxes;
-
-    spheres[0] = Sphere(
-        vec3(-3.0, 0.0, -3.0),
-        0.6,
-        RayTracingMaterial(
-            vec3(0.3, 1.0, 0.3),
-            vec3(0.3, 1.0, 0.3),
-            vec3(0.0),
-            0.0,
-            1.0
-        )
-    );
-    spheres[1] = Sphere(
-        vec3(-1.5, 0.0, -3.0),
-        0.6,
-        RayTracingMaterial(
-            vec3(0.3, 1.0, 0.3),
-            vec3(0.3, 1.0, 0.3),
-            vec3(0.0),
-            0.25,
-            1.0
-        )
-    );
-    spheres[2] = Sphere(
-        vec3(0.0, 0.0, -3.0),
-        0.6,
-        RayTracingMaterial(
-            vec3(0.3, 1.0, 0.3),
-            vec3(0.3, 1.0, 0.3),
-            vec3(0.0),
-            0.5,
-            1.0
-        )
-    );
-    spheres[3] = Sphere(
-        vec3(1.5, 0.0, -3.0),
-        0.6,
-        RayTracingMaterial(
-            vec3(0.3, 1.0, 0.3),
-            vec3(0.3, 1.0, 0.3),
-            vec3(0.0),
-            0.75,
-            1.0
-        )
-    );
-    spheres[4] = Sphere(
-        vec3(3.0, 0.0, -3.0),
-        0.6,
-        RayTracingMaterial(
-            vec3(0.3, 1.0, 0.3),
-            vec3(0.3, 1.0, 0.3),
-            vec3(0.0),
-            1.0,
-            1.0
-        )
-    );
-
-    spheres[5] = Sphere(
-        vec3(-2.5, -2.7, -3.0),
-        1.1,
-        RayTracingMaterial(
-            vec3(1.0, 0.9882, 0.3647),
-            vec3(0.9),
-            vec3(0.0),
-            0.2,
-            0.1
-        )
-    );
-    spheres[6] = Sphere(
-        vec3(0.0, -2.7, -3.0),
-        1.1,
-        RayTracingMaterial(
-            vec3(0.97, 0.45, 0.94),
-            vec3(0.9),
-            vec3(0.0),
-            0.2,
-            0.3
-        )
-    );
-
-    spheres[7] = Sphere(
-        vec3(2.5, -2.7, -3.0),
-        1.1,
-        RayTracingMaterial(
-            vec3(0.0, 0.0, 1.0),
-            vec3(1.0, 0.0, 0.0),
-            vec3(0.0),
-            0.5,
-            0.5
-        )
-    );
-
-
-
-    boxes[0] = Box(
-        vec3(-4.0, 0.0, -3.0),
-        vec3(0.1, 4.0, 4.0),
-        RayTracingMaterial(
-            vec3(1.0, 0.0, 0.0),
-            vec3(1.0),
-            vec3(0.0),
-            1.0,
-            0.0
-        )
-    );
-
-    boxes[1] = Box(
-        vec3(0.0, 0.0, -1.0),
-        vec3(4.0, 4.0, 0.1),
-        RayTracingMaterial(
-            vec3(1.0, 1.0, 1.0),
-            vec3(1.0),
-            vec3(0.0),
-            1.0,
-            0.0
-        )
-    );
-
-    boxes[2] = Box(
-        vec3(4.0, 0.0, -3.0),
-        vec3(0.1, 4.0, 4.0),
-        RayTracingMaterial(
-            vec3(0.0, 1.0, 0.0),
-            vec3(1.0),
-            vec3(0.0),
-            1.0,
-            0.0
-        )
-    );
-
-    boxes[3] = Box(
-        vec3(0.0, -4.0, -3.0),
-        vec3(4.0, 0.1, 4.0),
-        RayTracingMaterial(
-            vec3(1.0),
-            vec3(1.0),
-            vec3(0.0),
-            1.0,
-            0.0
-        )
-    );
-
-    boxes[4] = Box(
-        vec3(0.0, 4.0, -3.0),
-        vec3(4.0, 0.1, 4.0),
-        RayTracingMaterial(
-            vec3(1.0, 1.0, 1.0),
-            vec3(1.0),
-            vec3(0.0),
-            1.0,
-            0.0
-        )
-    );
-    boxes[5] = Box(
-        vec3(0.0, 3.9, -3.0),
-        vec3(2.0, 0.1, 2.0),
-        RayTracingMaterial(
-            vec3(1.0, 1.0, 1.0),
-            vec3(1.0),
-            vec3(1.0),
-            1.0,
-            0.0
-        )
-    );
-
-    boxes[6] = Box(
-        vec3(0.0, 0.0, -7.0),
-        vec3(4.0, 4.0, 0.2),
-        RayTracingMaterial(
-            vec3(1.0),
-            vec3(1.0),
-            vec3(0.0),
-            1.0,
-            0.0
-        )
-    );
-
-    HitInfo closestHit;
-    closestHit.hit = false;
-    closestHit.dist = 800000.0;
-
-    for (int i = 0; i < spheres.length(); i++) {
-        HitInfo sphereHit = intersect(ray, spheres[i]);
-
-        if (sphereHit.hit && sphereHit.dist < closestHit.dist) {
-            closestHit = sphereHit;
-        }
-    }
-
-    int ignore = 0;
-    if (depth < 1) { ignore = 1; }
-
-    for (int i = 0; i < boxes.length() - ignore; i++) {
-        HitInfo boxHit = intersect(ray, boxes[i]);
-
-        if (boxHit.hit && boxHit.dist < closestHit.dist) {
-            closestHit = boxHit;
-        }
-    }
-
-    return closestHit;
-}
-
-vec3 trace(Ray ray, inout uint rngState) {
-    int numBounces = u_maxBounces;
-
-    vec3 colorMult = vec3(1.0);
-    vec3 color = vec3(0.0);
-
-    for (int b = 0; b <= numBounces; b++) {
-
-        HitInfo closestHit = calculateClosestHit(ray, b);
-
-        rngState += uint(b) * -185u;
-
-        if (!closestHit.hit) {
-            break;
-        }
-
-        // update the ray position
-        ray.orgin = closestHit.hitPos + closestHit.normal * 0.1;
-
-        // calculate whether we are going to do a diffuse or specular reflection ray
-        float doSpecular = (RandomFloat01(rngState) < closestHit.material.specularProbability) ? 1.0 : 0.0;
-
-        // Calculate a new ray direction.
-        // Diffuse uses a normal oriented cosine weighted hemisphere sample.
-        // Perfectly smooth specular uses the reflection ray.
-        // Rough (glossy) specular lerps from the smooth specular to the rough diffuse by the material roughness squared
-        // Squaring the roughness is just a convention to make roughness feel more linear perceptually.
-        vec3 diffuseRayDir = normalize(closestHit.normal + RandomUnitVector(rngState));
-        vec3 specularRayDir = reflect(ray.direction, closestHit.normal);
-        specularRayDir = normalize(mix(specularRayDir, diffuseRayDir, closestHit.material.roughness * closestHit.material.roughness));
-        ray.direction = mix(diffuseRayDir, specularRayDir, doSpecular);
-
-        // add in emissive lighting
-        color += closestHit.material.emmisive * colorMult;
-
-        // update the colorMultiplier
-        colorMult *= mix(closestHit.material.color, closestHit.material.specularColor, doSpecular);
-    
-        float p = max(colorMult.r, max(colorMult.g, colorMult.b));
-
-        if (RandomFloat01(rngState) >= p) {
-            break;
-        }
-        colorMult *= 1.0 / p; 
-    }
-
-    return color;
-}
-
 void main() {
 
-    int pixelIndex = int(gl_FragCoord.y * u_resolution.x + gl_FragCoord.x);
-    uint rngState = uint((pixelIndex + u_time * -719393));
-
-    // calculate subpixel camera jitter for anti aliasing
-    //vec2 jitter = vec2(RandomFloat01(rngState), RandomFloat01(rngState)) - 0.5f;
-
+    // Calculate the uv coords and correct aspect ratio
     vec2 uv = (((gl_FragCoord.xy) / u_resolution) * 2.0 - 1.0) * vec2(u_resolution.x / u_resolution.y, 1.0);
 
-    float angle = tan((PI * 0.5 * u_fov) / 180.0);
-    vec2 xy = vec2(angle, angle);
-    uv *= xy;
+    // Calculate the angle with the FOV
+    float angle = tan((PI * 0.5 * 30.0) / 180.0);
+    vec2 xy = vec2(angle, angle); // Get the xy components
+    uv *= xy; // Multiply the uv by them
 
     vec2 m = (u_mouse.xy * 2.0 - u_resolution.xy) / u_resolution.y;
-
+    
+    // Get our ray
     Ray ray = Ray(
-        vec3(0.0, 0.0, -20.0),
-        normalize(vec3(uv, 1.0))
+        vec3(0.0, 0.0, -10.0), // Orgin at 0,0
+        normalize(vec3(uv, 1.0)) // Direction to the current uv and forward
     );
 
-    float mouseModifier = 3.0;
+    float mouseModifier = 1.0;
 
     if (u_mouseMove) {
         ray.orgin.xz *= rot2D(-m.x * mouseModifier);
@@ -478,15 +242,102 @@ void main() {
         ray.direction.yz *= rot2D(m.y * mouseModifier);
     }
 
-    vec3 color = vec3(0.0);
+    // Find the closest hit
+    HitInfo hit = calculateClosestHit(ray);
+    if (!hit.hit) {
+        gl_FragColor = vec4(vec3(0.1647, 0.1765, 0.1765), 1.0);
+        return;
+    }
+
+    RayTracingMaterial material = hit.material;
+    
+
+    vec3 albedo = material.albedo;
+    float roughness = material.roughness; // Surface roughness
+    float metallic = material.metallic; // Surface metalism factor
+
+    PointLight lights[3];
+    lights[0] = PointLight(
+        vec3(10.0, 10.0, -10.0),
+        vec3(400.0)
+    );
+
+    // lights[0] = PointLight(
+    //     vec3(10.0, 10.0, -10.0),
+    //     vec3(400.0, 0.0, 0.0)
+    // );
+    // lights[1] = PointLight(
+    //     vec3(-10.0, -10.0, -10.0),
+    //     vec3(0.0, 0.0, 400.0)
+    // );
+    // lights[2] = PointLight(
+    //     vec3(-10.0, 10.0, -10.0),
+    //     vec3(0.0, 400.0, 0.0)
+    // );
+
+    vec3 F0 = vec3(0.04); // TODO: describe
+    F0 = mix(F0, albedo, metallic); // TODO: describe
+
+    vec3 Lo = vec3(0.0); // Light out
+    vec3 V = normalize(ray.orgin - hit.hitPos); // TODO: describe
+
+    for (int i = 0; i < lights.length(); i++) {
+
+        // Calcualte some variables that will be user
+        vec3 L = normalize(lights[i].position - hit.hitPos);
+        vec3 H = normalize(V + L); // Halfway vector
+        float dist = length(lights[i].position - hit.hitPos);
+        float attenuation = 1.0 / (dist * dist);
+        vec3 radiance = lights[i].albedo * attenuation; // Light 'Power' factor
 
     
-    for (int r = 0; r < u_raysPerPixel; r++) {
-        color += trace(ray, rngState) / u_raysPerPixel;
-    }
-    color *= u_exposure;
-    color = ACESFilm(color);
-    color = LinearToSRGB(color);
+        // Calculate the NDF (Normal distrobution function)
+        vec3 N = hit.normal; // Surface normal
+        
 
+        // Calculate
+        float NDF = DistributionGGX(N, H, roughness);
+
+        // Calculate the Frensel Effect
+        float cosTheta = clamp(dot(H, V), 0.0, 1.0); // TODO: describe
+        vec3 F = fresnelSchlick(cosTheta, F0);
+
+        // Calculate the Geometry function
+        float G = GeometrySmith(N, V, L, roughness);
+
+
+        // Finally calculate the Cook-Torrance BRDF
+        vec3 numerator    = NDF * G * F; // Get the numerator
+        float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0)  + 0.0001; // Get the denominator
+
+        // Use the BDRF to get the specular component
+        vec3 specular = numerator / denominator;
+
+
+        // Now get the energy of the equation
+        vec3 kS = F; // Specular energy
+        vec3 kD = vec3(1.0) - kS; // Diffuse energy
+
+        kD *= 1.0 - metallic; // Reduce the diffuse energy based on the metallic factor
+
+
+        // Finally, get the final light values
+        // TODO: describe
+        float NdotL = max(dot(N, L), 0.0);        
+        Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+    }
+
+
+    float ao = 0.1; // Ambient light factor
+    vec3 ambient = vec3(0.03) * albedo * ao;
+
+    // Find the color values
+    vec3 color = ambient + Lo;  
+
+    // Apply HDR and gamma correction
+    color = color / (color + vec3(1.0));
+    color = pow(color, vec3(1.0/2.2)); 
+
+    // Return our final color value
     gl_FragColor = vec4(color, 1.0);
 }

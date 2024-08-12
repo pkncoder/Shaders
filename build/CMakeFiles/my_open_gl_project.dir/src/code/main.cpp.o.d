@@ -164,7 +164,7 @@ CMakeFiles/my_open_gl_project.dir/src/code/main.cpp.o: \
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h /usr/include/stdint.h \
  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
  /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
- /usr/local/include/GLFW/glfw3.h \
+ /usr/include/GLFW/glfw3.h \
  /home/pkner/code/Shaders/src/code/./libs/../../includes/packs/fileImports.h \
  /usr/include/c++/13/fstream /usr/include/c++/13/bits/codecvt.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/basic_file.h \

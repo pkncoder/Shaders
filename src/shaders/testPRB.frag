@@ -1,6 +1,8 @@
 #version 330 core
 precision mediump float;
 
+in vec2 u_resolution;
+
 #define PI 3.14159265359
 
 
@@ -89,6 +91,43 @@ HitInfo intersect(Ray ray, Sphere sphere) {
     return hit;
 }
 
+// Calculate the closest object in the scene
+HitInfo calculateClosestHit(Ray ray) {
+
+    // Start with a base hit info
+    HitInfo closestHit;
+    closestHit.hit = false; // Set hit to false
+    closestHit.dist = 800000000000000000000.0; // Set dist to a really big number
+
+    Sphere spheres[1]; // Array of all the spheres
+    spheres[0] = Sphere(
+        vec3(0.0, 0.0, 10.0),
+        1.0,
+        RayTracingMaterial(
+            vec3(1.0, 0.7843, 0.0),
+            0.0,
+            1.0
+        )
+    );
+    
+    // Loop every sphere
+    for (int i = 0; i < spheres.length(); i++) {
+
+        // Calculate the hit info of the current sphere
+        HitInfo hit = intersect(ray, spheres[i]);
+
+        // If the hit hit, and it is closer than the current closest
+        if (hit.hit && hit.dist < closestHit.dist) {
+
+            // Set closest hit to this hit
+            closestHit = hit;
+        }
+    }
+
+    // At the end, return hit
+    return closestHit;
+}
+
 /* ---------------------- FINAL HELPER EQUATIONS --------------- */
 
 
@@ -144,56 +183,65 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 
 void main() {
 
+    // Calculate the uv coords and correct aspect ratio
+    vec2 uv = (((gl_FragCoord.xy) / u_resolution) * 2.0 - 1.0) * vec2(u_resolution.x / u_resolution.y, 1.0);
+
+    // Calculate the angle with the FOV
+    float angle = tan((PI * 0.5 * 30.0) / 180.0);
+    vec2 xy = vec2(angle, angle); // Get the xy components
+    uv *= xy; // Multiply the uv by them
+    
+    // Get our ray
+    Ray ray = Ray(
+        vec3(0.0, 0.0, 0.0), // Orgin at 0,0
+        normalize(vec3(uv, 1.0)) // Direction to the current uv and forward
+    );
+
+    // Find the closest hit
+    HitInfo hit = calculateClosestHit(ray);
+    if (!hit.hit) {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        return;
+    }
+
+    RayTracingMaterial material = hit.material;
+    
+
+    vec3 albedo = material.albedo;
+    float roughness = material.roughness; // Surface roughness
+    float metallic = material.metallic; // Surface metalism factor
+
     PointLight lights[1];
     lights[0] = PointLight(
         vec3(3.0, 3.0, 4.0),
         vec3(1.0)
     );
 
-    Sphere spheres[1];
-    spheres[0] = Sphere(
-        vec3(0.0, 0.0, 0.0),
-        2.0,
-        RayTracingMaterial(
-            vec3(1.0, 0.0, 0.0),
-            0.0,
-            1.0
-        )
-    );
-
-
-
-    vec3 albedo;
-    float roughness; // Surface roughness
-    float metallic; // Surface metalism factor
-
     vec3 F0 = vec3(0.04); // TODO: describe
     F0 = mix(F0, albedo, metallic); // TODO: describe
 
     vec3 Lo; // Light out
-
-    vec3 lightPositions[1];
-    vec3 lightColors[1];
-    int i;
-    vec3 WorldPos;
     vec3 V; // TODO: describe
 
-        vec3 L = normalize(lightPositions[i] - WorldPos);
+    for (int i = 0; i < lights.length(); i++) {
+
+        // Calcualte some variables that will be user
+        vec3 L = normalize(lights[i].position - ray.direction);
         vec3 H = normalize(V + L); // Halfway vector
-        float distance = length(lightPositions[i] - WorldPos);
-        float attenuation = 1.0 / (distance * distance);
-        vec3 radiance = lightColors[i] * attenuation; // Light 'Power' factor
+        float dist = length(lights[i].position - ray.direction);
+        float attenuation = 1.0 / (dist * dist);
+        vec3 radiance = lights[i].albedo * attenuation; // Light 'Power' factor
 
     
         // Calculate the NDF (Normal distrobution function)
-        vec3 N; // Surface normal
+        vec3 N = hit.normal; // Surface normal
         
 
         // Calculate
         float NDF = DistributionGGX(N, H, roughness);
 
         // Calculate the Frensel Effect
-        float cosTheta; // TODO: describe
+        float cosTheta = max(dot(H, V), 0.0); // TODO: describe
         vec3 F = fresnelSchlick(cosTheta, F0);
 
         // Calculate the Geometry function
@@ -219,13 +267,14 @@ void main() {
         // TODO: describe
         float NdotL = max(dot(N, L), 0.0);        
         Lo += (kD * albedo / PI + specular) * radiance * NdotL;
-    
+    }
 
-    float ao; // Ambient light factor
+
+    float ao = 0.1; // Ambient light factor
     vec3 ambient = vec3(0.03) * albedo * ao;
 
     // Find the color values
-    vec3 color   = ambient + Lo;  
+    vec3 color = ambient + Lo;  
 
     // Apply HDR and gamma correction
     color = color / (color + vec3(1.0));

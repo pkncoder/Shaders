@@ -6,8 +6,8 @@
 #include "./libs/WindowMesh.h"
 #include "./libs/WPV.h"
 
-#define WIDTH 1000
-#define HEIGHT 650
+#define WIDTH 3000
+#define HEIGHT 2000
 
 using namespace std;
 
