@@ -69,6 +69,11 @@ void Program::setBool(const std::string &name, bool value)
     glUniform1i(glGetUniformLocation(program, name.c_str()), (int)value); 
 }
 
+// Array 3 float
+void Program::setArrayf3(const std::string &name, float value[3]) {
+    glUniform3f(glGetUniformLocation(program, name.c_str()), value[0], value[1], value[2]);
+}
+
 
 // --------------------------- Methods ----------------------
 

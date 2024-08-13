@@ -6,8 +6,8 @@
 #include "./libs/WindowMesh.h"
 #include "./libs/WPV.h"
 
-#define WIDTH 3000
-#define HEIGHT 2000
+#define WIDTH 1200
+#define HEIGHT 650
 
 using namespace std;
 
@@ -42,7 +42,7 @@ int main() {
 
 
     // Set a clear color in our window
-    window.setClearColor(1.0, 0.0, 1.0, 1.0);
+    window.setClearColor(0.0, 0.0, 0.0, 1.0);
 
 
     // -------------------------- WPV -----------------------
@@ -53,21 +53,21 @@ int main() {
     
     // --------------------- Run Loop -----------------------
 
-    float fov = 30.0;
-    int u_time = 0;
-    int timeSave = 0;
+    bool mouseMove = false;
+    int time = 0;
 
-    int raysPerPixel = 1;
-    int maxBounces = 1;
-
-    float exposure = 0.5;
-
-    bool render = true;
+    float albedo[3];
+    float roughness = 1.0;
+    float metallic = 0.0;
+    float ambient = 0.0;
 
     while(window.windowOpen()) {
 
         // Start proccess
         wpv.start();
+
+
+        /* BASE */
 
         if (ImGui::Button("Compile", ImVec2(100, 50))) {
 
@@ -81,39 +81,45 @@ int main() {
             wpv.setProgram(shaderProgram);
         }
 
-        ImGui::SliderInt("Rays Per Pixel", &raysPerPixel, 1.0, 100.0);
-        wpv.getProgram().setInt("u_raysPerPixel", raysPerPixel);
-
-        ImGui::SliderInt("Max Bounces", &maxBounces, 1.0, 100.0);
-        wpv.getProgram().setInt("u_maxBounces", maxBounces);
-
-        bool mouseMove;
+        
         ImGui::Checkbox("Mouse", &mouseMove);
-
         wpv.getProgram().setBool("u_mouseMove", mouseMove);
-
-        ImGui::SliderFloat("Exposure", &exposure, 0.1, 2.0);
-        wpv.getProgram().setFloat("u_exposure", exposure);
-
-
-        ImGui::SliderFloat("FOV", &fov, 1.0, 179.0);
-
-        wpv.getProgram().setFloat("u_fov", fov);
 
         double mouseXPos;
         double mouseYPos;
-
         glfwGetCursorPos(wpv.getWindow().getWindow(), &mouseXPos, &mouseYPos);
 
         wpv.getProgram().setFloat("u_mousePosX", mouseXPos);
         wpv.getProgram().setFloat("u_mousePosY", mouseYPos);
 
-        wpv.getProgram().setInt("u_time", u_time);
+        wpv.getProgram().setInt("u_time", time);
+
+        /* BASE */
+
+
+        /* EXTRA */
+
+        ImGui::ColorEdit3("Albedo", albedo);
+        wpv.getProgram().setArrayf3("u_albedo", albedo);
+
+        ImGui::SliderFloat("Roughness", &roughness, 0.0, 1.0);
+        wpv.getProgram().setFloat("u_roughness", roughness);
+
+        ImGui::SliderFloat("Metallic", &metallic, 0.0, 1.0);
+        wpv.getProgram().setFloat("u_metallic", metallic);
+
+        ImGui::SliderFloat("Ambient", &ambient, 0.0, 1.0);
+        wpv.getProgram().setFloat("u_ambient", ambient);
+
+
+
+
+
 
         // End proccess
         wpv.end();
 
-        u_time++;
+        time++;
     }
 
     // -------------------- Post-Run loop --------------------

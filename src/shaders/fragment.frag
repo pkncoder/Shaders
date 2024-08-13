@@ -3,12 +3,10 @@ precision mediump float;
 
 in vec2 u_resolution;
 
-uniform float u_mousePosX;
-uniform float u_mousePosY;
-
-uniform bool u_mouseMove;
-
-vec2 u_mouse = vec2(u_mousePosX, u_mousePosY);
+uniform vec3 u_albedo;
+uniform float u_roughness;
+uniform float u_metallic;
+uniform float u_ambient;
 
 #define PI 3.14159265359
 
@@ -106,34 +104,14 @@ HitInfo calculateClosestHit(Ray ray) {
     closestHit.hit = false; // Set hit to false
     closestHit.dist = 800000000000000000000.0; // Set dist to a really big number
 
-    Sphere spheres[3]; // Array of all the spheres
+    Sphere spheres[1]; // Array of all the spheres
     spheres[0] = Sphere(
-        vec3(-3.0, 0.0, 0.0),
-        1.0,
-        RayTracingMaterial(
-            vec3(0.4, 1.0, 0.0),
-            1.0,
-            0.6
-        )
-    );
-
-    spheres[1] = Sphere(
-        vec3(0.0, 0.0, 8.0),
-        3.0,
-        RayTracingMaterial(
-            vec3(0.0, 0.5333, 1.0),
-            0.8,
-            0.2
-        )
-    );
-
-    spheres[2] = Sphere(
-        vec3(3.0, -2.0, 3.0),
+        vec3(0.0, 0.0, 0.0),
         2.0,
         RayTracingMaterial(
-            vec3(1.0, 0.1686, 0.1686),
-            0.0,
-            0.4
+            u_albedo,
+            u_metallic,
+            u_roughness
         )
     );
     
@@ -155,14 +133,11 @@ HitInfo calculateClosestHit(Ray ray) {
     return closestHit;
 }
 
-/* ---------------------- FINAL HELPER EQUATIONS --------------- */
-
-
 /*---------------------------- COOK-TORRANCE BDRF -----------------------------*/
 
 // D
 // Normal distrobution
-float DistributionGGX(vec3 N, vec3 H, float roughness)
+float NormalDistribution(vec3 N, vec3 H, float roughness)
 {
     float a      = roughness*roughness;
     float a2     = a*a;
@@ -178,7 +153,7 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
 
 // F
 // Frensel
-vec3 fresnelSchlick(float cosTheta, vec3 F0)
+vec3 Fresnel(float cosTheta, vec3 F0)
 {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }  
@@ -195,7 +170,7 @@ float GeometrySchlickGGX(float NdotV, float roughness)
 	
     return num / denom;
 }
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+float GeometryShadowing(vec3 N, vec3 V, vec3 L, float roughness)
 {
     float NdotV = max(dot(N, V), 0.0);
     float NdotL = max(dot(N, L), 0.0);
@@ -206,15 +181,57 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 }
 
 
-/* --------------------- Main Function --------------- */
+/* ------------------ PBR FUNCTIONS ------------------ */
 
-mat2 rot2D(float angle) {
-    float s = sin(angle);
-    float c = cos(angle);
-    return mat2(c, -s, s, c);
+
+vec3 PBR(HitInfo hit, Ray ray, PointLight light) {
+
+
+    /* Variables */
+
+    vec3 F0 = vec3(0.04); // TODO: describe
+    F0 = mix(F0, hit.material.albedo, hit.material.metallic); // TODO: describe
+
+    vec3 L = normalize(light.position - hit.hitPos); // Light direction
+    
+    vec3 V = normalize(ray.orgin - hit.hitPos); // TODO: describe
+    vec3 H = normalize(V + L); // Halfway vector
+
+    vec3 N = hit.normal; // Surface normal
+
+    float cosTheta = clamp(dot(H, V), 0.0, 1.0); // TODO: describe
+
+
+    /* PBR Calculations */
+
+    // Now get the energy of the equation
+    vec3 kS = Fresnel(cosTheta, F0); // Specular energy
+    vec3 kD = vec3(1.0) - kS * (1.0 - hit.material.metallic); // Diffuse energy
+
+    // Cook - Torrence
+    vec3 numerator = NormalDistribution(N, H, hit.material.roughness) * GeometryShadowing(N, V, L, hit.material.roughness) * Fresnel(cosTheta, F0); // cookTorrence numerator
+    float denominator = max(4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0), 0.0001); // cookTorrence denominator
+
+    vec3 BRDF = kD * hit.material.albedo / PI + (numerator / denominator); // Calculate our final BRDF
+
+    // Light power
+    float dist = length(light.position - hit.hitPos); // Distance to the light
+    float lightPower = 1.0 / (dist * dist); // Inverse square law
+    vec3 emissivity = light.albedo * lightPower; // Emmisive power of the light
+
+    // Final lighting equation
+    return BRDF * emissivity * max(dot(L, N), 0.0);
 }
 
+
+
+
+/* --------------------- Main Function --------------- */
+
 void main() {
+
+
+    /* Camera Setup */
 
     // Calculate the uv coords and correct aspect ratio
     vec2 uv = (((gl_FragCoord.xy) / u_resolution) * 2.0 - 1.0) * vec2(u_resolution.x / u_resolution.y, 1.0);
@@ -224,37 +241,23 @@ void main() {
     vec2 xy = vec2(angle, angle); // Get the xy components
     uv *= xy; // Multiply the uv by them
 
-    vec2 m = (u_mouse.xy * 2.0 - u_resolution.xy) / u_resolution.y;
-    
+
+    /* Path Tracing Setup */
+
     // Get our ray
     Ray ray = Ray(
         vec3(0.0, 0.0, -10.0), // Orgin at 0,0
         normalize(vec3(uv, 1.0)) // Direction to the current uv and forward
     );
 
-    float mouseModifier = 1.0;
-
-    if (u_mouseMove) {
-        ray.orgin.xz *= rot2D(-m.x * mouseModifier);
-        ray.direction.xz *= rot2D(-m.x * mouseModifier);
-
-        ray.orgin.yz *= rot2D(m.y * mouseModifier);
-        ray.direction.yz *= rot2D(m.y * mouseModifier);
-    }
-
     // Find the closest hit
     HitInfo hit = calculateClosestHit(ray);
+
+    // If the ray doesn't hit
     if (!hit.hit) {
         gl_FragColor = vec4(vec3(0.1647, 0.1765, 0.1765), 1.0);
         return;
     }
-
-    RayTracingMaterial material = hit.material;
-    
-
-    vec3 albedo = material.albedo;
-    float roughness = material.roughness; // Surface roughness
-    float metallic = material.metallic; // Surface metalism factor
 
     PointLight lights[3];
     lights[0] = PointLight(
@@ -262,74 +265,23 @@ void main() {
         vec3(400.0)
     );
 
-    // lights[0] = PointLight(
-    //     vec3(10.0, 10.0, -10.0),
-    //     vec3(400.0, 0.0, 0.0)
-    // );
-    // lights[1] = PointLight(
-    //     vec3(-10.0, -10.0, -10.0),
-    //     vec3(0.0, 0.0, 400.0)
-    // );
-    // lights[2] = PointLight(
-    //     vec3(-10.0, 10.0, -10.0),
-    //     vec3(0.0, 400.0, 0.0)
-    // );
 
-    vec3 F0 = vec3(0.04); // TODO: describe
-    F0 = mix(F0, albedo, metallic); // TODO: describe
-
+    /* PBR & Path Tracing */
+    
+    // Path tracing
     vec3 Lo = vec3(0.0); // Light out
-    vec3 V = normalize(ray.orgin - hit.hitPos); // TODO: describe
 
+    // Loop every light
     for (int i = 0; i < lights.length(); i++) {
 
-        // Calcualte some variables that will be user
-        vec3 L = normalize(lights[i].position - hit.hitPos);
-        vec3 H = normalize(V + L); // Halfway vector
-        float dist = length(lights[i].position - hit.hitPos);
-        float attenuation = 1.0 / (dist * dist);
-        vec3 radiance = lights[i].albedo * attenuation; // Light 'Power' factor
-
-    
-        // Calculate the NDF (Normal distrobution function)
-        vec3 N = hit.normal; // Surface normal
-        
-
-        // Calculate
-        float NDF = DistributionGGX(N, H, roughness);
-
-        // Calculate the Frensel Effect
-        float cosTheta = clamp(dot(H, V), 0.0, 1.0); // TODO: describe
-        vec3 F = fresnelSchlick(cosTheta, F0);
-
-        // Calculate the Geometry function
-        float G = GeometrySmith(N, V, L, roughness);
-
-
-        // Finally calculate the Cook-Torrance BRDF
-        vec3 numerator    = NDF * G * F; // Get the numerator
-        float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0)  + 0.0001; // Get the denominator
-
-        // Use the BDRF to get the specular component
-        vec3 specular = numerator / denominator;
-
-
-        // Now get the energy of the equation
-        vec3 kS = F; // Specular energy
-        vec3 kD = vec3(1.0) - kS; // Diffuse energy
-
-        kD *= 1.0 - metallic; // Reduce the diffuse energy based on the metallic factor
-
-
-        // Finally, get the final light values
-        // TODO: describe
-        float NdotL = max(dot(N, L), 0.0);        
-        Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+        // Get the PRB calculation for each light
+        Lo += PBR(hit, ray, lights[i]);
     }
 
 
-    float ao = 0.1; // Ambient light factor
-    vec3 ambient = vec3(0.03) * albedo * ao;
+    // Post-Path procsessing
+    float ao = u_ambient; // Ambient light factor
+    vec3 ambient = vec3(0.03) * hit.material.albedo * ao;
 
     // Find the color values
     vec3 color = ambient + Lo;  

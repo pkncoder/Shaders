@@ -3,6 +3,13 @@ precision mediump float;
 
 in vec2 u_resolution;
 
+uniform float u_mousePosX;
+uniform float u_mousePosY;
+
+uniform bool u_mouseMove;
+
+vec2 u_mouse = vec2(u_mousePosX, u_mousePosY);
+
 #define PI 3.14159265359
 
 
@@ -99,14 +106,34 @@ HitInfo calculateClosestHit(Ray ray) {
     closestHit.hit = false; // Set hit to false
     closestHit.dist = 800000000000000000000.0; // Set dist to a really big number
 
-    Sphere spheres[1]; // Array of all the spheres
+    Sphere spheres[3]; // Array of all the spheres
     spheres[0] = Sphere(
-        vec3(0.0, 0.0, 10.0),
+        vec3(-3.0, 0.0, 0.0),
         1.0,
         RayTracingMaterial(
-            vec3(1.0, 0.7843, 0.0),
+            vec3(0.4, 1.0, 0.0),
+            1.0,
+            0.6
+        )
+    );
+
+    spheres[1] = Sphere(
+        vec3(0.0, 0.0, 8.0),
+        3.0,
+        RayTracingMaterial(
+            vec3(0.0, 0.5333, 1.0),
+            0.8,
+            0.2
+        )
+    );
+
+    spheres[2] = Sphere(
+        vec3(3.0, -2.0, 3.0),
+        2.0,
+        RayTracingMaterial(
+            vec3(1.0, 0.1686, 0.1686),
             0.0,
-            1.0
+            0.4
         )
     );
     
@@ -181,6 +208,12 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 
 /* --------------------- Main Function --------------- */
 
+mat2 rot2D(float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+    return mat2(c, -s, s, c);
+}
+
 void main() {
 
     // Calculate the uv coords and correct aspect ratio
@@ -190,17 +223,29 @@ void main() {
     float angle = tan((PI * 0.5 * 30.0) / 180.0);
     vec2 xy = vec2(angle, angle); // Get the xy components
     uv *= xy; // Multiply the uv by them
+
+    vec2 m = (u_mouse.xy * 2.0 - u_resolution.xy) / u_resolution.y;
     
     // Get our ray
     Ray ray = Ray(
-        vec3(0.0, 0.0, 0.0), // Orgin at 0,0
+        vec3(0.0, 0.0, -10.0), // Orgin at 0,0
         normalize(vec3(uv, 1.0)) // Direction to the current uv and forward
     );
+
+    float mouseModifier = 1.0;
+
+    if (u_mouseMove) {
+        ray.orgin.xz *= rot2D(-m.x * mouseModifier);
+        ray.direction.xz *= rot2D(-m.x * mouseModifier);
+
+        ray.orgin.yz *= rot2D(m.y * mouseModifier);
+        ray.direction.yz *= rot2D(m.y * mouseModifier);
+    }
 
     // Find the closest hit
     HitInfo hit = calculateClosestHit(ray);
     if (!hit.hit) {
-        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        gl_FragColor = vec4(vec3(0.1647, 0.1765, 0.1765), 1.0);
         return;
     }
 
@@ -211,24 +256,37 @@ void main() {
     float roughness = material.roughness; // Surface roughness
     float metallic = material.metallic; // Surface metalism factor
 
-    PointLight lights[1];
+    PointLight lights[3];
     lights[0] = PointLight(
-        vec3(3.0, 3.0, 4.0),
-        vec3(1.0)
+        vec3(10.0, 10.0, -10.0),
+        vec3(400.0)
     );
+
+    // lights[0] = PointLight(
+    //     vec3(10.0, 10.0, -10.0),
+    //     vec3(400.0, 0.0, 0.0)
+    // );
+    // lights[1] = PointLight(
+    //     vec3(-10.0, -10.0, -10.0),
+    //     vec3(0.0, 0.0, 400.0)
+    // );
+    // lights[2] = PointLight(
+    //     vec3(-10.0, 10.0, -10.0),
+    //     vec3(0.0, 400.0, 0.0)
+    // );
 
     vec3 F0 = vec3(0.04); // TODO: describe
     F0 = mix(F0, albedo, metallic); // TODO: describe
 
-    vec3 Lo; // Light out
-    vec3 V; // TODO: describe
+    vec3 Lo = vec3(0.0); // Light out
+    vec3 V = normalize(ray.orgin - hit.hitPos); // TODO: describe
 
     for (int i = 0; i < lights.length(); i++) {
 
         // Calcualte some variables that will be user
-        vec3 L = normalize(lights[i].position - ray.direction);
+        vec3 L = normalize(lights[i].position - hit.hitPos);
         vec3 H = normalize(V + L); // Halfway vector
-        float dist = length(lights[i].position - ray.direction);
+        float dist = length(lights[i].position - hit.hitPos);
         float attenuation = 1.0 / (dist * dist);
         vec3 radiance = lights[i].albedo * attenuation; // Light 'Power' factor
 
@@ -241,7 +299,7 @@ void main() {
         float NDF = DistributionGGX(N, H, roughness);
 
         // Calculate the Frensel Effect
-        float cosTheta = max(dot(H, V), 0.0); // TODO: describe
+        float cosTheta = clamp(dot(H, V), 0.0, 1.0); // TODO: describe
         vec3 F = fresnelSchlick(cosTheta, F0);
 
         // Calculate the Geometry function
