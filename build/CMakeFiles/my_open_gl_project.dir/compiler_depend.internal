@@ -8,7 +8,6 @@ CMakeFiles/my_open_gl_project.dir/src/code/libs/Program.cpp.o
  /home/pkner/code/Shaders/src/includes/packs/windowImports.h
  /home/pkner/code/Shaders/src/code/libs/Shader.h
  /home/pkner/code/Shaders/src/code/libs/Program.h
- /usr/include/GLFW/glfw3.h
  /usr/include/KHR/khrplatform.h
  /usr/include/alloca.h
  /usr/include/asm-generic/errno-base.h
@@ -238,6 +237,7 @@ CMakeFiles/my_open_gl_project.dir/src/code/libs/Program.cpp.o
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h
+ /usr/local/include/GLFW/glfw3.h
 
 CMakeFiles/my_open_gl_project.dir/src/code/libs/Shader.cpp.o
  /home/pkner/code/Shaders/src/code/libs/Shader.cpp
@@ -245,7 +245,6 @@ CMakeFiles/my_open_gl_project.dir/src/code/libs/Shader.cpp.o
  /home/pkner/code/Shaders/src/includes/packs/fileImports.h
  /home/pkner/code/Shaders/src/includes/packs/windowImports.h
  /home/pkner/code/Shaders/src/code/libs/Shader.h
- /usr/include/GLFW/glfw3.h
  /usr/include/KHR/khrplatform.h
  /usr/include/alloca.h
  /usr/include/asm-generic/errno-base.h
@@ -473,6 +472,7 @@ CMakeFiles/my_open_gl_project.dir/src/code/libs/Shader.cpp.o
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h
+ /usr/local/include/GLFW/glfw3.h
 
 CMakeFiles/my_open_gl_project.dir/src/code/libs/WPV.cpp.o
  /home/pkner/code/Shaders/src/code/libs/WPV.cpp
@@ -485,7 +485,6 @@ CMakeFiles/my_open_gl_project.dir/src/code/libs/WPV.cpp.o
  /home/pkner/code/Shaders/src/code/libs/Window.h
  /home/pkner/code/Shaders/src/code/libs/WindowMesh.h
  /home/pkner/code/Shaders/src/code/libs/WPV.h
- /usr/include/GLFW/glfw3.h
  /usr/include/KHR/khrplatform.h
  /usr/include/alloca.h
  /usr/include/asm-generic/errno-base.h
@@ -715,6 +714,7 @@ CMakeFiles/my_open_gl_project.dir/src/code/libs/WPV.cpp.o
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h
+ /usr/local/include/GLFW/glfw3.h
 
 CMakeFiles/my_open_gl_project.dir/src/code/libs/Window.cpp.o
  /home/pkner/code/Shaders/src/code/libs/Window.cpp
@@ -727,7 +727,6 @@ CMakeFiles/my_open_gl_project.dir/src/code/libs/Window.cpp.o
  /home/pkner/code/Shaders/src/includes/packs/standardImports.h
  /home/pkner/code/Shaders/src/includes/packs/windowImports.h
  /home/pkner/code/Shaders/src/code/libs/Window.h
- /usr/include/GLFW/glfw3.h
  /usr/include/KHR/khrplatform.h
  /usr/include/alloca.h
  /usr/include/asm-generic/errno-base.h
@@ -922,6 +921,7 @@ CMakeFiles/my_open_gl_project.dir/src/code/libs/Window.cpp.o
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h
+ /usr/local/include/GLFW/glfw3.h
 
 CMakeFiles/my_open_gl_project.dir/src/code/libs/WindowMesh.cpp.o
  /home/pkner/code/Shaders/src/code/libs/WindowMesh.cpp
@@ -931,7 +931,6 @@ CMakeFiles/my_open_gl_project.dir/src/code/libs/WindowMesh.cpp.o
  /home/pkner/code/Shaders/src/code/libs/Shader.h
  /home/pkner/code/Shaders/src/code/libs/Program.h
  /home/pkner/code/Shaders/src/code/libs/WindowMesh.h
- /usr/include/GLFW/glfw3.h
  /usr/include/KHR/khrplatform.h
  /usr/include/alloca.h
  /usr/include/asm-generic/errno-base.h
@@ -1161,6 +1160,7 @@ CMakeFiles/my_open_gl_project.dir/src/code/libs/WindowMesh.cpp.o
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h
+ /usr/local/include/GLFW/glfw3.h
 
 CMakeFiles/my_open_gl_project.dir/src/code/main.cpp.o
  /home/pkner/code/Shaders/src/code/main.cpp
@@ -1178,7 +1178,6 @@ CMakeFiles/my_open_gl_project.dir/src/code/main.cpp.o
  /home/pkner/code/Shaders/src/code/libs/WPV.h
  /home/pkner/code/Shaders/src/code/libs/Window.h
  /home/pkner/code/Shaders/src/code/libs/WindowMesh.h
- /usr/include/GLFW/glfw3.h
  /usr/include/KHR/khrplatform.h
  /usr/include/alloca.h
  /usr/include/asm-generic/errno-base.h
@@ -1412,6 +1411,7 @@ CMakeFiles/my_open_gl_project.dir/src/code/main.cpp.o
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h
+ /usr/local/include/GLFW/glfw3.h
 
 CMakeFiles/my_open_gl_project.dir/src/includes/glad/glad.c.o
  /home/pkner/code/Shaders/src/includes/glad/glad.c
@@ -2080,7 +2080,6 @@ CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_impl_glfw.cpp.o
  /home/pkner/code/Shaders/src/includes/imgui/imgui_impl_glfw.h
  /usr/include/GL/gl.h
  /usr/include/GL/glext.h
- /usr/include/GLFW/glfw3.h
  /usr/include/KHR/khrplatform.h
  /usr/include/assert.h
  /usr/include/features-time64.h
@@ -2109,6 +2108,7 @@ CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_impl_glfw.cpp.o
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h
+ /usr/local/include/GLFW/glfw3.h
 
 CMakeFiles/my_open_gl_project.dir/src/includes/imgui/imgui_impl_opengl3.cpp.o
  /home/pkner/code/Shaders/src/includes/imgui/imgui_impl_opengl3.cpp

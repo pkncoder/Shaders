@@ -5,14 +5,7 @@ in vec2 u_resolution;
 
 uniform bool u_mouseMove;
 
-uniform int u_raysPerPixel;
-uniform int u_maxBounces;
-
-uniform float u_exposure;
-
 uniform int u_time;
-
-uniform float u_fov;
 
 uniform float u_mousePosX;
 uniform float u_mousePosY;
@@ -399,7 +392,7 @@ HitInfo calculateClosestHit(Ray ray, int depth) {
 }
 
 vec3 trace(Ray ray, inout uint rngState) {
-    int numBounces = u_maxBounces;
+    int numBounces = 5;
 
     vec3 colorMult = vec3(1.0);
     vec3 color = vec3(0.0);
@@ -457,7 +450,7 @@ void main() {
 
     vec2 uv = (((gl_FragCoord.xy) / u_resolution) * 2.0 - 1.0) * vec2(u_resolution.x / u_resolution.y, 1.0);
 
-    float angle = tan((PI * 0.5 * u_fov) / 180.0);
+    float angle = tan((PI * 0.5 * 30.0) / 180.0);
     vec2 xy = vec2(angle, angle);
     uv *= xy;
 
@@ -481,10 +474,10 @@ void main() {
     vec3 color = vec3(0.0);
 
     
-    for (int r = 0; r < u_raysPerPixel; r++) {
-        color += trace(ray, rngState) / u_raysPerPixel;
+    for (int r = 0; r < 1; r++) {
+        color += trace(ray, rngState) / 1;
     }
-    color *= u_exposure;
+    color *= 1.0;
     color = ACESFilm(color);
     color = LinearToSRGB(color);
 

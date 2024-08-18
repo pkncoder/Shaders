@@ -22,10 +22,13 @@ int main() {
 
     // ----------------- Shader & Program -----------------
 
+    // Variable for the fragment shader
+    std::string fragmentShader = "fragment.frag";
+    std::string filePath = "/home/pkner/code/Shaders/src/shaders/";
 
     // Create our vertex and fragment shaders
     Shader vertex("/home/pkner/code/Shaders/src/shaders/vertex.vert", GL_VERTEX_SHADER);
-    Shader fragment("/home/pkner/code/Shaders/src/shaders/fragment.frag", GL_FRAGMENT_SHADER);
+    Shader fragment((filePath + fragmentShader).c_str(), GL_FRAGMENT_SHADER);
 
     // Create our shader program that holds everything to be ran
     Program shaderProgram(vertex, fragment);
@@ -53,10 +56,16 @@ int main() {
     
     // --------------------- Run Loop -----------------------
 
+    int selected = 0;
+    
     bool mouseMove = false;
     int time = 0;
 
     float albedo[3];
+    albedo[0] = 0.0;
+    albedo[1] = 0.0;
+    albedo[2] = 1.0;
+
     float roughness = 1.0;
     float metallic = 0.0;
     float ambient = 0.0;
@@ -74,12 +83,21 @@ int main() {
             shaderProgram.kill();
 
             Shader vertex("/home/pkner/code/Shaders/src/shaders/vertex.vert", GL_VERTEX_SHADER);
-            Shader fragment("/home/pkner/code/Shaders/src/shaders/fragment.frag", GL_FRAGMENT_SHADER);
+            Shader fragment((filePath + fragmentShader).c_str(), GL_FRAGMENT_SHADER);
 
             shaderProgram = Program(vertex, fragment);
 
             wpv.setProgram(shaderProgram);
         }
+
+        const char* fragmentShaders[] {
+            "fragment.frag",
+            "oldFragment.frag"
+        };
+
+        ImGui::ListBox("Fragment Shader File", &selected, fragmentShaders, 2);
+
+        fragmentShader = fragmentShaders[selected];
 
         
         ImGui::Checkbox("Mouse", &mouseMove);

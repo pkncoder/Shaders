@@ -3,12 +3,18 @@ precision mediump float;
 
 in vec2 u_resolution;
 
+uniform bool u_mouseMove;
+
+uniform float u_mousePosX;
+uniform float u_mousePosY;
+
 uniform vec3 u_albedo;
 uniform float u_roughness;
 uniform float u_metallic;
 uniform float u_ambient;
 
 #define PI 3.14159265359
+vec2 u_mouse = vec2(u_mousePosX, u_mousePosY);
 
 
 /* -------------------------- STRUCTS -------------------------- */
@@ -24,6 +30,13 @@ struct RayTracingMaterial {
 struct Sphere {
     vec3 position;
     float radius;
+    RayTracingMaterial material;
+};
+
+// Cube
+struct Box {
+    vec3 position;
+    vec3 boxSize;
     RayTracingMaterial material;
 };
 
@@ -96,6 +109,34 @@ HitInfo intersect(Ray ray, Sphere sphere) {
     return hit;
 }
 
+HitInfo intersect(Ray ray, Box box) {
+
+    HitInfo hit;
+    hit.hit = false;
+
+    vec3 m = 1./ray.direction;
+    vec3 n = m*(ray.orgin - box.position);
+    vec3 k = abs(m) * box.boxSize;
+	
+    vec3 t1 = -n - k;
+    vec3 t2 = -n + k;
+
+	float tN = max( max( t1.x, t1.y ), t1.z );
+	float tF = min( min( t2.x, t2.y ), t2.z );
+	
+	if( tN > tF || tF < 0.) return hit;
+    
+    float t = tN < 0.1 ? tF : tN;
+
+    hit.hit = true;
+    hit.hitPos = ray.orgin + ray.direction * t;
+    hit.dist = t;
+    hit.normal = -sign(ray.direction)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);;
+    hit.material = box.material;
+
+    return hit;
+}
+
 // Calculate the closest object in the scene
 HitInfo calculateClosestHit(Ray ray) {
 
@@ -106,7 +147,7 @@ HitInfo calculateClosestHit(Ray ray) {
 
     Sphere spheres[1]; // Array of all the spheres
     spheres[0] = Sphere(
-        vec3(0.0, 0.0, 0.0),
+        vec3(0.0),
         2.0,
         RayTracingMaterial(
             u_albedo,
@@ -114,7 +155,19 @@ HitInfo calculateClosestHit(Ray ray) {
             u_roughness
         )
     );
-    
+
+    Box boxes[1];
+
+    // boxes[0] = Box(
+    //     vec3(0.0, 0.0, 0.0),
+    //     vec3(2.0),
+    //     RayTracingMaterial(
+    //         u_albedo,
+    //         u_metallic,
+    //         u_roughness
+    //     )
+    // );
+
     // Loop every sphere
     for (int i = 0; i < spheres.length(); i++) {
 
@@ -129,55 +182,52 @@ HitInfo calculateClosestHit(Ray ray) {
         }
     }
 
+    // Loop every box
+    for (int i = 0; i < boxes.length(); i++) {
+
+        // Calculate the hit info of the current box
+        HitInfo hit = intersect(ray, boxes[i]);
+
+        // If the hit hit, and it is closer than the current closes
+        if (hit.hit && hit.dist < closestHit.dist) {
+
+            // Set the closest hit to this hit
+            closestHit = hit;
+        }
+    }
+
     // At the end, return hit
     return closestHit;
 }
 
 /*---------------------------- COOK-TORRANCE BDRF -----------------------------*/
 
-// D
-// Normal distrobution
-float NormalDistribution(vec3 N, vec3 H, float roughness)
-{
-    float a      = roughness*roughness;
-    float a2     = a*a;
-    float NdotH  = max(dot(N, H), 0.0);
-    float NdotH2 = NdotH*NdotH;
-	
-    float num   = a2;
-    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-    denom = PI * denom * denom;
-	
-    return num / denom;
+// N
+// Normal distrubution
+float distributionGGX (vec3 N, vec3 H, float roughness){
+    float a2    = roughness * roughness * roughness * roughness;
+    float NdotH = max (dot (N, H), 0.0);
+    float denom = (NdotH * NdotH * (a2 - 1.0) + 1.0);
+    return a2 / (PI * denom * denom);
+}
+
+// G
+// Geometry
+float geometrySchlickGGX (float NdotV, float roughness){
+    float r = (roughness + 1.0);
+    float k = (r * r) / 8.0;
+    return NdotV / (NdotV * (1.0 - k) + k);
+}
+
+float geometrySmith (vec3 N, vec3 V, vec3 L, float roughness){
+    return geometrySchlickGGX (max (dot (N, L), 0.0), roughness) * 
+           geometrySchlickGGX (max (dot (N, V), 0.0), roughness);
 }
 
 // F
 // Frensel
-vec3 Fresnel(float cosTheta, vec3 F0)
-{
-    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
-}  
-
-// G
-// Geometry
-float GeometrySchlickGGX(float NdotV, float roughness)
-{
-    float r = (roughness + 1.0);
-    float k = (r*r) / 8.0;
-
-    float num   = NdotV;
-    float denom = NdotV * (1.0 - k) + k;
-	
-    return num / denom;
-}
-float GeometryShadowing(vec3 N, vec3 V, vec3 L, float roughness)
-{
-    float NdotV = max(dot(N, V), 0.0);
-    float NdotL = max(dot(N, L), 0.0);
-    float ggx2  = GeometrySchlickGGX(NdotV, roughness);
-    float ggx1  = GeometrySchlickGGX(NdotL, roughness);
-	
-    return ggx1 * ggx2;
+vec3 fresnelSchlick (float cosTheta, vec3 F0){
+    return F0 + (1.0 - F0) * pow (1.0 - cosTheta, 5.0);
 }
 
 
@@ -190,7 +240,7 @@ vec3 PBR(HitInfo hit, Ray ray, PointLight light) {
     /* Variables */
 
     vec3 F0 = vec3(0.04); // TODO: describe
-    F0 = mix(F0, hit.material.albedo, hit.material.metallic); // TODO: describe
+    F0 = mix(F0, pow(hit.material.albedo, vec3(2.2)), hit.material.metallic); // TODO: describe
 
     vec3 L = normalize(light.position - hit.hitPos); // Light direction
     
@@ -199,20 +249,29 @@ vec3 PBR(HitInfo hit, Ray ray, PointLight light) {
 
     vec3 N = hit.normal; // Surface normal
 
-    float cosTheta = clamp(dot(H, V), 0.0, 1.0); // TODO: describe
+    float cosTheta = max(dot(H, V), 0.0); // TODO: describe
 
 
     /* PBR Calculations */
+    // BDRF parts
+    float NDF = distributionGGX(N, H, hit.material.roughness);
+    float G = geometrySmith(N, V, L, hit.material.roughness);
+    vec3 F = fresnelSchlick(cosTheta, F0);
 
     // Now get the energy of the equation
-    vec3 kS = Fresnel(cosTheta, F0); // Specular energy
-    vec3 kD = vec3(1.0) - kS * (1.0 - hit.material.metallic); // Diffuse energy
+    vec3 kD = vec3(1.0) - F;
+    kD *= 1.0 - hit.material.metallic;
 
     // Cook - Torrence
-    vec3 numerator = NormalDistribution(N, H, hit.material.roughness) * GeometryShadowing(N, V, L, hit.material.roughness) * Fresnel(cosTheta, F0); // cookTorrence numerator
-    float denominator = max(4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0), 0.0001); // cookTorrence denominator
+    vec3 numerator = NDF * G * F; // cookTorrence numerator
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0); // cookTorrence denominator
 
-    vec3 BRDF = kD * hit.material.albedo / PI + (numerator / denominator); // Calculate our final BRDF
+    // Specular part
+    vec3 specular = numerator / max(denominator, 0.0001);
+
+
+    // Final BDRF calculations
+    float NdotL = max(dot(N, L), 0.0);
 
     // Light power
     float dist = length(light.position - hit.hitPos); // Distance to the light
@@ -220,13 +279,21 @@ vec3 PBR(HitInfo hit, Ray ray, PointLight light) {
     vec3 emissivity = light.albedo * lightPower; // Emmisive power of the light
 
     // Final lighting equation
-    return BRDF * emissivity * max(dot(L, N), 0.0);
+    return light.albedo * (kD * pow(hit.material.albedo, vec3(2.2)) / PI + specular) *
+        (NdotL / dot(light.position - hit.hitPos, light.position - hit.hitPos));
 }
 
 
 
 
 /* --------------------- Main Function --------------- */
+
+// Rotation matrix for mouse movement
+mat2 rot2D(float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+    return mat2(c, -s, s, c);
+}
 
 void main() {
 
@@ -235,6 +302,7 @@ void main() {
 
     // Calculate the uv coords and correct aspect ratio
     vec2 uv = (((gl_FragCoord.xy) / u_resolution) * 2.0 - 1.0) * vec2(u_resolution.x / u_resolution.y, 1.0);
+    vec2 m = (u_mouse.xy * 2.0 - u_resolution.xy) / u_resolution.y;
 
     // Calculate the angle with the FOV
     float angle = tan((PI * 0.5 * 30.0) / 180.0);
@@ -250,6 +318,18 @@ void main() {
         normalize(vec3(uv, 1.0)) // Direction to the current uv and forward
     );
 
+    // Apply mouse movement
+
+    float mouseModifier = 3.0;
+
+    if (u_mouseMove) {
+        ray.orgin.xz *= rot2D(-m.x * mouseModifier);
+        ray.direction.xz *= rot2D(-m.x * mouseModifier);
+
+        ray.orgin.yz *= rot2D(m.y * mouseModifier);
+        ray.direction.yz *= rot2D(m.y * mouseModifier);
+    }
+
     // Find the closest hit
     HitInfo hit = calculateClosestHit(ray);
 
@@ -259,10 +339,10 @@ void main() {
         return;
     }
 
-    PointLight lights[3];
+    PointLight lights[1];
     lights[0] = PointLight(
         vec3(10.0, 10.0, -10.0),
-        vec3(400.0)
+        vec3(200.0)
     );
 
 
