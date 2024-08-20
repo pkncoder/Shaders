@@ -92,10 +92,11 @@ int main() {
 
         const char* fragmentShaders[] {
             "fragment.frag",
-            "oldFragment.frag"
+            "oldFragment.frag",
+            "oldFragmentPBR.frag"
         };
 
-        ImGui::ListBox("Fragment Shader File", &selected, fragmentShaders, 2);
+        ImGui::ListBox("Fragment Shader File", &selected, fragmentShaders, 3);
 
         fragmentShader = fragmentShaders[selected];
 

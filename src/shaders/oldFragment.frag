@@ -342,7 +342,7 @@ HitInfo calculateClosestHit(Ray ray, int depth) {
         )
     );
     boxes[5] = Box(
-        vec3(0.0, 3.9, -3.0),
+        vec3(0.0, 3.9, -4.0),
         vec3(2.0, 0.1, 2.0),
         RayTracingMaterial(
             vec3(1.0, 1.0, 1.0),
@@ -419,6 +419,7 @@ vec3 trace(Ray ray, inout uint rngState) {
         // Rough (glossy) specular lerps from the smooth specular to the rough diffuse by the material roughness squared
         // Squaring the roughness is just a convention to make roughness feel more linear perceptually.
         vec3 diffuseRayDir = normalize(closestHit.normal + RandomUnitVector(rngState));
+        if (dot(closestHit.normal, diffuseRayDir) >= 90.0) { diffuseRayDir = -diffuseRayDir; }
         vec3 specularRayDir = reflect(ray.direction, closestHit.normal);
         specularRayDir = normalize(mix(specularRayDir, diffuseRayDir, closestHit.material.roughness * closestHit.material.roughness));
         ray.direction = mix(diffuseRayDir, specularRayDir, doSpecular);

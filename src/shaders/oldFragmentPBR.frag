@@ -8,21 +8,12 @@ uniform bool u_mouseMove;
 uniform float u_mousePosX;
 uniform float u_mousePosY;
 
-uniform int u_time;
-
 uniform vec3 u_albedo;
 uniform float u_roughness;
 uniform float u_metallic;
 uniform float u_ambient;
 
 #define PI 3.14159265359
-#define TWO_PI 6.28318530718
-
-#define MAX_BOUNCES 1
-#define SAMPLES 3.0
-
-#define SPHERE_NUM 3
-
 vec2 u_mouse = vec2(u_mousePosX, u_mousePosY);
 
 
@@ -31,7 +22,6 @@ vec2 u_mouse = vec2(u_mousePosX, u_mousePosY);
 // Object materials
 struct RayTracingMaterial {
     vec3 albedo;
-    float emmisive;
     float metallic;
     float roughness;
 };
@@ -42,6 +32,20 @@ struct Sphere {
     float radius;
     RayTracingMaterial material;
 };
+
+// Cube
+struct Box {
+    vec3 position;
+    vec3 boxSize;
+    RayTracingMaterial material;
+};
+
+// Point-light
+struct PointLight {
+    vec3 position;
+    vec3 albedo;
+};
+
 
 // Functional structs
 // Returned from hit functions to give info on an intersection
@@ -58,34 +62,6 @@ struct Ray {
     vec3 orgin;
     vec3 direction;
 };
-
-
-/* Random Values */
-
-uint wang_hash(inout uint seed)
-{
-    seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
-    seed *= uint(9);
-    seed = seed ^ (seed >> 4);
-    seed *= uint(0x27d4eb2d);
-    seed = seed ^ (seed >> 15);
-    return seed;
-}
- 
-float RandomFloat01(inout uint state)
-{
-    return float(wang_hash(state)) / 4294967296.0;
-}
-
-vec3 RandomUnitVector(inout uint state)
-{
-    float z = RandomFloat01(state) * 2.0f - 1.0f;
-    float a = RandomFloat01(state) * TWO_PI;
-    float r = sqrt(1.0f - z * z);
-    float x = r * cos(a);
-    float y = r * sin(a);
-    return vec3(x, y, z);
-}
 
 
 /* --------------------- RAY-OBJECT EQUATIONS ------------------ */
@@ -133,13 +109,64 @@ HitInfo intersect(Ray ray, Sphere sphere) {
     return hit;
 }
 
+HitInfo intersect(Ray ray, Box box) {
+
+    HitInfo hit;
+    hit.hit = false;
+
+    vec3 m = 1./ray.direction;
+    vec3 n = m*(ray.orgin - box.position);
+    vec3 k = abs(m) * box.boxSize;
+	
+    vec3 t1 = -n - k;
+    vec3 t2 = -n + k;
+
+	float tN = max( max( t1.x, t1.y ), t1.z );
+	float tF = min( min( t2.x, t2.y ), t2.z );
+	
+	if( tN > tF || tF < 0.) return hit;
+    
+    float t = tN < 0.1 ? tF : tN;
+
+    hit.hit = true;
+    hit.hitPos = ray.orgin + ray.direction * t;
+    hit.dist = t;
+    hit.normal = -sign(ray.direction)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);;
+    hit.material = box.material;
+
+    return hit;
+}
+
 // Calculate the closest object in the scene
-HitInfo calculateClosestHit(Ray ray, Sphere spheres[SPHERE_NUM]) {
+HitInfo calculateClosestHit(Ray ray) {
 
     // Start with a base hit info
     HitInfo closestHit;
     closestHit.hit = false; // Set hit to false
     closestHit.dist = 800000000000000000000.0; // Set dist to a really big number
+
+    Sphere spheres[1]; // Array of all the spheres
+    spheres[0] = Sphere(
+        vec3(0.0),
+        2.0,
+        RayTracingMaterial(
+            u_albedo,
+            u_metallic,
+            u_roughness
+        )
+    );
+
+    Box boxes[1];
+
+    // boxes[0] = Box(
+    //     vec3(0.0, 0.0, 0.0),
+    //     vec3(2.0),
+    //     RayTracingMaterial(
+    //         u_albedo,
+    //         u_metallic,
+    //         u_roughness
+    //     )
+    // );
 
     // Loop every sphere
     for (int i = 0; i < spheres.length(); i++) {
@@ -151,6 +178,20 @@ HitInfo calculateClosestHit(Ray ray, Sphere spheres[SPHERE_NUM]) {
         if (hit.hit && hit.dist < closestHit.dist) {
 
             // Set closest hit to this hit
+            closestHit = hit;
+        }
+    }
+
+    // Loop every box
+    for (int i = 0; i < boxes.length(); i++) {
+
+        // Calculate the hit info of the current box
+        HitInfo hit = intersect(ray, boxes[i]);
+
+        // If the hit hit, and it is closer than the current closes
+        if (hit.hit && hit.dist < closestHit.dist) {
+
+            // Set the closest hit to this hit
             closestHit = hit;
         }
     }
@@ -193,81 +234,57 @@ vec3 fresnelSchlick (float cosTheta, vec3 F0){
 /* ------------------ PBR FUNCTIONS ------------------ */
 
 
-vec3 PBR(Ray ray, Sphere spheres[SPHERE_NUM], uint rngState) {
-
-    /* Calculate the first hit*/
-    HitInfo hit;
+vec3 PBR(HitInfo hit, Ray ray, PointLight light) {
 
 
     /* Variables */
-    vec3 F0;
-    float cosTheta;
 
-    vec3 V;
-    vec3 N;
+    vec3 F0 = vec3(0.04); // TODO: describe
+    F0 = mix(F0, pow(hit.material.albedo, vec3(2.2)), hit.material.metallic); // TODO: describe
 
-    vec3 Kd;
+    vec3 L = normalize(light.position - hit.hitPos); // Light direction
+    
+    vec3 V = normalize(ray.orgin - hit.hitPos); // TODO: describe
+    vec3 H = normalize(V + L); // Halfway vector
 
-    vec3 specular;
+    vec3 N = hit.normal; // Surface normal
 
-    vec3 hitMod = vec3(1.0);
-    vec3 totalColor = vec3(0.0);
-
-    for (int i = 0; i <= MAX_BOUNCES; i++) {
-
-        hit = calculateClosestHit(ray, spheres);
-
-        if (!hit.hit) {
-            break;
-        }
-
-        F0 = vec3(0.04); // TODO: describe
-        F0 = mix(F0, pow(hit.material.albedo, vec3(2.2)), hit.material.metallic); // TODO: describe
-
-        V = normalize(ray.orgin - hit.hitPos); // TODO: describe
-
-        N = hit.normal; // Surface normal
-
-        cosTheta = max(dot(hit.normal, V), 0.0); // TODO: describe
+    float cosTheta = max(dot(H, V), 0.0); // TODO: describe
 
 
-        /* PBR Calculations */
-        // BDRF parts
-        float NDF = distributionGGX(N, N, hit.material.roughness);
-        float G = geometrySmith(N, V, N, hit.material.roughness);
-        vec3 F = fresnelSchlick(cosTheta, F0);
+    /* PBR Calculations */
+    // BDRF parts
+    float NDF = distributionGGX(N, H, hit.material.roughness);
+    float G = geometrySmith(N, V, L, hit.material.roughness);
+    vec3 F = fresnelSchlick(cosTheta, F0);
 
-        // Now get the energy of the equation
-        Kd = vec3(1.0) - F;
-        Kd *= 1.0 - hit.material.metallic;
+    // Now get the energy of the equation
+    vec3 kD = vec3(1.0) - F;
+    kD *= 1.0 - hit.material.metallic;
 
-        // Cook - Torrence
-        vec3 numerator = NDF * G * F; // cookTorrence numerator
-        float denominator = 4.0 * max(dot(N, V), 0.0) * cosTheta; // cookTorrence denominator
+    // Cook - Torrence
+    vec3 numerator = NDF * G * F; // cookTorrence numerator
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0); // cookTorrence denominator
 
-        ray.orgin = hit.hitPos + hit.normal * 0.1;
+    // Specular part
+    vec3 specular = numerator / max(denominator, 0.0001);
 
-        // Specular part
-        specular = numerator / max(denominator, 0.0001);
 
-        // calculate whether we are going to do a diffuse or specular reflection ray
-        float doSpecular = (RandomFloat01(rngState) < 0.5) ? 1.0 : 0.0;
+    // Final BDRF calculations
+    float NdotL = max(dot(N, L), 0.0);
 
-        vec3 diffuseRayDir = normalize(hit.normal + RandomUnitVector(rngState));
-        if (dot(hit.normal, diffuseRayDir) >= 90.0) { diffuseRayDir = -diffuseRayDir; }
-        vec3 specularRayDir = specular;
-        specularRayDir = normalize(mix(specularRayDir, diffuseRayDir, hit.material.roughness));
-        ray.direction = mix(diffuseRayDir, specularRayDir, doSpecular);
+    // Light power
+    float dist = length(light.position - hit.hitPos); // Distance to the light
+    float lightPower = 1.0 / (dist * dist); // Inverse square law
+    vec3 emissivity = light.albedo * lightPower; // Emmisive power of the light
 
-        vec3 diffuse = pow(hit.material.albedo, vec3(2.2));
-
-        //Final lighting equation
-        hitMod *= Kd * diffuse;
-        totalColor += hit.material.emmisive * hitMod;
-    }
-
-    return totalColor;
+    // Final lighting equation
+    return light.albedo * (kD * pow(hit.material.albedo, vec3(2.2)) / PI + specular) *
+        (NdotL / dot(light.position - hit.hitPos, light.position - hit.hitPos));
 }
+
+
+
 
 /* --------------------- Main Function --------------- */
 
@@ -293,55 +310,11 @@ void main() {
     uv *= xy; // Multiply the uv by them
 
 
-    /* Other non-ray tracing setup */
-
-    int pixelIndex = int(gl_FragCoord.y * u_resolution.x + gl_FragCoord.x);;
-
-
     /* Path Tracing Setup */
-
-
-    /* SCENE */
-
-    // Spheres
-    Sphere spheres[SPHERE_NUM]; // Array of all the spheres
-    spheres[0] = Sphere(
-        vec3(3.0, -18.0, 20.0),
-        20.0,
-        RayTracingMaterial(
-            u_albedo,
-            0.0,
-            u_metallic,
-            u_roughness
-        )
-    );
-    spheres[1] = Sphere(
-        vec3(0.0, 0.0, 10.0),
-        2.0,
-        RayTracingMaterial(
-            u_albedo,
-            0.0,
-            u_metallic,
-            1.0
-        )
-    );
-    spheres[2] = Sphere(
-        vec3(-100.0, 0.0, 100.0),
-        80,
-        RayTracingMaterial(
-            vec3(1.0),
-            1.0,
-            0.0,
-            1.0
-        )
-    );
-
-
-    /* Ray */
 
     // Get our ray
     Ray ray = Ray(
-        vec3(-5.0, 0.0, -10.0), // Orgin at 0,0
+        vec3(0.0, 0.0, -10.0), // Orgin at 0,0
         normalize(vec3(uv, 1.0)) // Direction to the current uv and forward
     );
 
@@ -358,7 +331,7 @@ void main() {
     }
 
     // Find the closest hit
-    HitInfo hit = calculateClosestHit(ray, spheres);
+    HitInfo hit = calculateClosestHit(ray);
 
     // If the ray doesn't hit
     if (!hit.hit) {
@@ -366,20 +339,23 @@ void main() {
         return;
     }
 
+    PointLight lights[1];
+    lights[0] = PointLight(
+        vec3(10.0, 10.0, -10.0),
+        vec3(200.0)
+    );
+
 
     /* PBR & Path Tracing */
     
     // Path tracing
     vec3 Lo = vec3(0.0); // Light out
 
-    uint rngState;
-
     // Loop every light
-    for (int i = 0; i < SAMPLES; i++) {
-        rngState = uint(((pixelIndex) * 3014) * (u_time * 3 * (i + 1) * 12));
+    for (int i = 0; i < lights.length(); i++) {
 
         // Get the PRB calculation for each light
-        Lo += PBR(ray, spheres, rngState) / SAMPLES;
+        Lo += PBR(hit, ray, lights[i]);
     }
 
 
